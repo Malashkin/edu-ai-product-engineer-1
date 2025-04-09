@@ -1,4 +1,7 @@
-flask==3.0.2
-requests==2.31.0
+nltk==3.8.1
 openai==0.28.0
-python-dotenv==1.0.1 
+python-dotenv==1.0.1
+kagglehub[pandas-datasets]==0.1.0
+pandas==2.2.0
+requests==2.32.3
+python-amazon-paapi5==2.0.0 
