@@ -5,6 +5,46 @@ from analysis import analyze_summarization_methods
 from datetime import datetime
 import os
 
+def process_reviews():
+    """Process reviews from the Reviews.csv file."""
+    try:
+        # Load the CSV file
+        df = pd.read_csv("Reviews.csv")
+        
+        # Take first 50 reviews
+        reviews = df.head(50)
+        
+        # Process each review
+        results = []
+        for idx, row in reviews.iterrows():
+            review_text = row['Text']
+            
+            # Generate summaries
+            print(f"Processing review {idx + 1}/50...")
+            extractive = extractive_summarize(review_text)
+            abstractive = abstractive_summarize(review_text)
+            
+            results.append({
+                'review_id': idx,
+                'original_text': review_text,
+                'extractive_summary': extractive,
+                'abstractive_summary': abstractive
+            })
+        
+        # Save results to JSON file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"summarized_reviews_{timestamp}.json"
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        
+        print(f"Results saved to {output_file}")
+        return output_file
+        
+    except Exception as e:
+        print(f"Error processing reviews: {str(e)}")
+        return None
+
 def analyze_results(results):
     """Analyze the effectiveness of both summarization approaches."""
     analysis = {
@@ -33,7 +73,7 @@ def analyze_results(results):
     # Analyze each review's summaries
     for result in results:
         # Compare lengths
-        original_length = len(result['Text'].split())
+        original_length = len(result['original_text'].split())
         extractive_length = len(result['extractive_summary'].split())
         abstractive_length = len(result['abstractive_summary'].split())
         
@@ -89,61 +129,6 @@ def analyze_results(results):
         """
     
     return analysis
-
-def process_reviews():
-    """Process reviews from the local CSV file."""
-    try:
-        # Read the local CSV file
-        print("Reading local dataset...")
-        df = pd.read_csv("Reviews.csv")
-        
-        # Get first 10 reviews
-        reviews = df.head(10)
-        
-        # Process each review
-        results = []
-        for index, row in reviews.iterrows():
-            review_text = row['Text']
-            
-            # Generate summaries
-            print(f"Processing review {index + 1}/10...")
-            extractive_summary = extractive_summarize(review_text)
-            abstractive_summary = abstractive_summarize(review_text)
-            
-            # Create result dictionary
-            result = {
-                "review_id": row['Id'],
-                "product_id": row['ProductId'],
-                "user_id": row['UserId'],
-                "score": row['Score'],
-                "Text": review_text,
-                "extractive_summary": extractive_summary,
-                "abstractive_summary": abstractive_summary,
-                "analysis": analyze_summarization_methods()
-            }
-            results.append(result)
-        
-        # Save results to JSON
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"reviews_summaries_{timestamp}.json"
-        
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(results, f, ensure_ascii=False, indent=4)
-        
-        # Analyze results and save comparison
-        final_analysis = analyze_results(results)
-        analysis_filename = f"summarization_comparison_{timestamp}.json"
-        
-        with open(analysis_filename, 'w', encoding='utf-8') as f:
-            json.dump(final_analysis, f, ensure_ascii=False, indent=4)
-        
-        print(f"\nResults saved to {filename}")
-        print(f"Final analysis saved to {analysis_filename}")
-        return results
-        
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        return None
 
 if __name__ == "__main__":
     # Process the reviews
