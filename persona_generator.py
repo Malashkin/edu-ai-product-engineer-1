@@ -1,16 +1,21 @@
 import json
 import os
-import openai
+from openai import OpenAI
 from datetime import datetime
 
 class PersonaGenerator:
     def __init__(self):
-        openai.api_key = os.getenv('OPENAI_API_KEY')
+        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         
     def generate_persona(self, reviews):
         """Generate persona based on reviews using OpenAI API"""
         # Формируем промпт для OpenAI
-        prompt = f"""На основе следующих отзывов создай персону покупателя по следующей структуре:
+        reviews_text = "\n".join([review.get('text', '') for review in reviews])
+        
+        prompt = f"""На основе следующих отзывов создай персону покупателя туши для ресниц. 
+        Проанализируй отзывы и создай детальный портрет типичного покупателя, который мог бы оставить такие отзывы.
+        
+        Структура персоны должна быть следующей:
         Имя:
         Возраст:
         Пол:
@@ -23,26 +28,71 @@ class PersonaGenerator:
         Боли/тревоги:
 
         Отзывы для анализа:
-        {json.dumps(reviews, ensure_ascii=False, indent=2)}
+        {reviews_text}
 
-        Ответ должен быть строго в указанном формате, без дополнительных комментариев.
+        Ответ должен быть строго в указанном формате на русском языке, без дополнительных комментариев.
+        Используй реальные инсайты из отзывов для создания персоны.
         """
 
         try:
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "Ты - эксперт по анализу потребительского поведения и созданию персон."},
+                    {"role": "system", "content": "Ты - эксперт по анализу потребительского поведения и созданию персон. Твоя задача - создавать реалистичные персоны на основе анализа отзывов."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
                 max_tokens=800
             )
             
-            return response.choices[0].message['content']
+            return response.choices[0].message.content
             
         except Exception as e:
             print(f"Error generating persona: {str(e)}")
+            return None
+
+    def generate_reviews_summary(self, reviews):
+        """Generate a summary of reviews using OpenAI API"""
+        # Извлекаем только текст отзывов
+        reviews_text = []
+        for review in reviews:
+            if isinstance(review, dict):
+                text = review.get('text', '')
+                if text and not text.startswith('Комментарий:') and not text.startswith('Отзывы') and not text.startswith('Срок использования:'):
+                    reviews_text.append(text)
+            elif isinstance(review, str):
+                if not review.startswith('Комментарий:') and not review.startswith('Отзывы') and not review.startswith('Срок использования:'):
+                    reviews_text.append(review)
+        
+        # Формируем промпт для OpenAI
+        prompt = f"""Проанализируй следующие отзывы о туши для ресниц и создай краткое саммари, 
+        которое описывает основные тенденции в отзывах, включая:
+        - Общее впечатление пользователей
+        - Основные положительные моменты
+        - Основные отрицательные моменты
+        - Часто упоминаемые характеристики продукта
+
+        Отзывы для анализа:
+        {' | '.join(reviews_text)}
+
+        Ответ должен быть в виде связного текста на русском языке, без заголовков и списков.
+        """
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "Ты - эксперт по анализу потребительских отзывов. Твоя задача - создавать четкие и информативные обзоры на основе отзывов покупателей."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=800
+            )
+            
+            return response.choices[0].message.content
+            
+        except Exception as e:
+            print(f"Error generating summary: {str(e)}")
             return None
 
     def process_reviews_batch(self, reviews_file, batch_size=15):
