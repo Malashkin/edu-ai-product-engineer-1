@@ -70,6 +70,54 @@ def chunk_list(lst, n):
     """Разбивает список на подсписки размером n"""
     return [lst[i:i + n] for i in range(0, len(lst), n)]
 
+def split_list_in_half(lst):
+    """Разделяет список на две равные части"""
+    half = len(lst) // 2
+    return lst[:half], lst[half:]
+
+def process_site_reviews(site_name, reviews, timestamp):
+    """Обработка отзывов одного сайта"""
+    print(f"\nProcessing reviews from {site_name}...")
+    
+    # Разделяем отзывы на две части
+    reviews_part1, reviews_part2 = split_list_in_half(reviews)
+    
+    # Обрабатываем каждую часть отдельно
+    all_summaries = []
+    all_personas = []
+    
+    for part_num, reviews_part in enumerate([reviews_part1, reviews_part2], 1):
+        print(f"\nProcessing part {part_num} ({len(reviews_part)} reviews)...")
+        
+        # Создаем группы по 3 отзыва для суммаризации
+        review_groups = chunk_list(reviews_part, 3)
+        summaries = []
+        
+        for i, group in enumerate(review_groups, 1):
+            print(f"Summarizing group {i}/{len(review_groups)}...")
+            summary = summarize_reviews(group)
+            if summary:
+                summaries.append(summary)
+        
+        all_summaries.extend(summaries)
+        
+        # Генерируем персону на основе всех саммари этой части
+        print(f"Generating persona for part {part_num}...")
+        generator = PersonaGenerator()
+        reviews_for_persona = [{'text': s['summary']} for s in summaries]
+        persona = generator.generate_persona(reviews_for_persona)
+        
+        if persona:
+            all_personas.append({
+                'site': site_name,
+                'part': part_num,
+                'based_on_reviews': len(reviews_part),
+                'based_on_summaries': len(summaries),
+                'persona': persona
+            })
+    
+    return all_summaries, all_personas
+
 def main():
     """Main entry point for the project."""
     print("Starting the review analysis pipeline...")
@@ -92,68 +140,47 @@ def main():
         print("No URLs provided for scraping.")
         return
 
-    # Шаг 2: Суммаризация отзывов (по 3 отзыва)
-    print("\n2. Summarizing reviews (5 reviews per summary)...")
+    # Загружаем отзывы для обработки
     with open(reviews_file, 'r', encoding='utf-8') as f:
         reviews_data = json.load(f)
     
-    all_reviews = []
-    for site_data in reviews_data['sites'].values():
-        all_reviews.extend(site_data['reviews'])
+    all_summaries = []
+    all_personas = []
     
-    # Разбиваем отзывы на группы по 5
-    review_groups = chunk_list(all_reviews, 5)
-    summaries = []
+    # Обрабатываем каждый сайт отдельно
+    for site_name, site_data in reviews_data['sites'].items():
+        site_summaries, site_personas = process_site_reviews(
+            site_name, 
+            site_data['reviews'],
+            timestamp
+        )
+        all_summaries.extend(site_summaries)
+        all_personas.extend(site_personas)
     
-    for i, group in enumerate(review_groups, 1):
-        print(f"Summarizing group {i}/{len(review_groups)}...")
-        summary = summarize_reviews(group)
-        if summary:
-            summaries.append(summary)
-    
-    # Сохраняем суммаризированные отзывы
+    # Сохраняем все саммари
     summaries_file = f"summaries_{timestamp}.json"
     with open(summaries_file, 'w', encoding='utf-8') as f:
         json.dump({
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'total_summaries': len(summaries),
-            'summaries': summaries
+            'total_summaries': len(all_summaries),
+            'summaries_by_site': all_summaries
         }, f, ensure_ascii=False, indent=4)
-    print(f"Summaries saved to: {summaries_file}")
     
-    # Шаг 3: Генерация персон (каждые 5 суммаризированных отзывов)
-    print("\n3. Generating personas (5 summaries per persona)...")
-    summary_groups = chunk_list(summaries, 5)
-    personas = []
-    generator = PersonaGenerator()
-    
-    for i, group in enumerate(summary_groups, 1):
-        print(f"Generating persona {i}/{len(summary_groups)}...")
-        # Создаем список отзывов для генерации персоны
-        reviews_for_persona = [{'text': summary['summary']} for summary in group]
-        persona = generator.generate_persona(reviews_for_persona)
-        if persona:
-            personas.append({
-                'persona_number': i,
-                'based_on_summaries': len(group),
-                'persona': persona
-            })
-    
-    # Сохраняем персоны
+    # Сохраняем все персоны
     personas_file = f"personas_{timestamp}.json"
     with open(personas_file, 'w', encoding='utf-8') as f:
         json.dump({
             'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'total_personas': len(personas),
-            'personas': personas
+            'total_personas': len(all_personas),
+            'personas': all_personas
         }, f, ensure_ascii=False, indent=4)
     
     print("\nPipeline completed successfully!")
     print("\nGenerated files:")
     print(f"1. Raw scraping data: {raw_file}")
     print(f"2. Extracted reviews: {reviews_file}")
-    print(f"3. Summaries (3 reviews per summary): {summaries_file}")
-    print(f"4. Personas (5 summaries per persona): {personas_file}")
+    print(f"3. Summaries: {summaries_file}")
+    print(f"4. Personas (2 per site): {personas_file}")
 
 if __name__ == "__main__":
     main() 
