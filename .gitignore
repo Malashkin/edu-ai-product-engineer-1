@@ -15,7 +15,6 @@ lib64/
 parts/
 sdist/
 var/
-output/
 wheels/
 *.egg-info/
 .installed.cfg
@@ -24,7 +23,6 @@ wheels/
 # Virtual Environment
 venv/
 ENV/
-env/
 
 # IDE
 .idea/
@@ -32,11 +30,22 @@ env/
 *.swp
 *.swo
 
-# Project specific
+# Environment variables
 .env
-*.json
-nltk_data/
+.env.*
 
-# OS specific
+# Output files
+output/
+
+# OS
 .DS_Store
-Thumbs.db 
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+*.json
+nltk_data/ 
