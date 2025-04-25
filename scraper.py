@@ -10,6 +10,7 @@ import time
 import json
 from datetime import datetime
 import re
+import os
 
 class ReviewScraper:
     def __init__(self):
@@ -180,9 +181,28 @@ class ReviewScraper:
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         
-        service = Service(ChromeDriverManager().install())
-        self.driver = webdriver.Chrome(service=service, options=chrome_options)
-        
+        try:
+            # Пытаемся установить ChromeDriver через ChromeDriverManager
+            chrome_driver_path = ChromeDriverManager().install()
+            print(f"ChromeDriver path: {chrome_driver_path}")
+            
+            # Устанавливаем права на исполнение
+            if os.path.exists(chrome_driver_path):
+                os.chmod(chrome_driver_path, 0o755)
+                print(f"Установлены права на исполнение для ChromeDriver")
+            
+            service = Service(chrome_driver_path)
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+        except Exception as e:
+            print(f"Ошибка при установке ChromeDriver: {str(e)}")
+            # Пробуем использовать встроенный драйвер
+            try:
+                print("Пробуем использовать альтернативный метод...")
+                self.driver = webdriver.Chrome(options=chrome_options)
+            except Exception as e2:
+                print(f"Не удалось инициализировать ChromeDriver: {str(e2)}")
+                raise
+    
     def cleanup(self):
         """Cleanup browser resources"""
         if self.driver:

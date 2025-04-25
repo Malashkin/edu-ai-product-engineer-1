@@ -63,7 +63,6 @@ python kaggle_downloader.py
 ## Структура проекта
 
 - `kaggle_downloader.py` - основной скрипт для обработки отзывов
-- `summarization.py` - модуль с функциями суммаризации
 - `analysis.py` - модуль с функциями анализа результатов
 - `requirements.txt` - список зависимостей
 - `.env` - файл с конфигурацией (API ключи)
