@@ -6,6 +6,7 @@ from agents.agent import Agent
 from agents.runner import Runner
 from dotenv import load_dotenv
 from openai import OpenAI
+from datetime import datetime
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -112,23 +113,20 @@ class ProductType:
 
 def get_latest_personas_file():
     """Находит самый свежий файл с персонами"""
-    print("\nПоиск файла с персонами...")
-    files = glob.glob("personas_*.json")
+    files = [f for f in os.listdir('output') if f.startswith("personas_")]
     if not files:
         raise FileNotFoundError("Файл с персонами не найден. Сначала запустите main.py")
-    latest = max(files, key=os.path.getctime)
-    print(f"Найден файл: {latest}")
-    return latest
+    return max(files, key=lambda x: os.path.getctime(os.path.join('output', x)))
 
 def load_personas():
-    """Загружаем персоны из последнего сгенерированного файла"""
+    """Загружает персоны из последнего сгенерированного файла"""
+    print("\nПоиск файла с персонами...")
     latest_file = get_latest_personas_file()
-    print(f"\nЗагрузка персон из файла: {latest_file}")
+    print(f"Загрузка персон из файла: {latest_file}")
     
-    with open(latest_file, "r", encoding="utf-8") as f:
+    with open(os.path.join('output', latest_file), 'r', encoding='utf-8') as f:
         data = json.load(f)
-    print(f"Загружено {len(data['personas'])} персон")
-    return data["personas"]
+    return data.get('personas', [])
 
 def create_agent_from_persona(persona, product_type):
     """Создает агента на основе данных персоны"""
@@ -349,7 +347,7 @@ def run_group_discussion():
     output_file = f"mascara_discussion_{timestamp}.json"
     
     print(f"\nСохранение результатов в файл: {output_file}")
-    with open(output_file, "w", encoding="utf-8") as f:
+    with open(os.path.join('output', output_file), "w", encoding="utf-8") as f:
         json.dump(discussion_results, f, ensure_ascii=False, indent=2)
     
     print("Групповая дискуссия завершена успешно")
@@ -358,6 +356,17 @@ def run_group_discussion():
 async def run_group_discussion_async():
     """Асинхронная версия для совместимости с OpenAI Agents Python SDK"""
     return run_group_discussion()
+
+def save_discussion_results(discussion_data):
+    """Сохраняет результаты дискуссии в файл"""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"mascara_discussion_{timestamp}.json"
+    
+    with open(os.path.join('output', filename), 'w', encoding='utf-8') as f:
+        json.dump(discussion_data, f, ensure_ascii=False, indent=2)
+    
+    print(f"\nРезультаты дискуссии сохранены в файл: {filename}")
+    return filename
 
 if __name__ == "__main__":
     # При запуске файла напрямую, выводим результаты в консоль
