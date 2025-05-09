@@ -1,6 +1,6 @@
 import json
 import os
-from openai import OpenAI
+import openai
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -10,12 +10,23 @@ load_dotenv()
 class PersonaGenerator:
     def __init__(self):
         """Инициализация клиента OpenAI"""
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Старая версия OpenAI имеет другую инициализацию
+        openai.api_key = os.getenv("OPENAI_API_KEY")
     
     def generate_persona(self, reviews):
         """Генерирует персону на основе отзывов"""
+        # Ограничиваем количество отзывов для избежания превышения лимита токенов
+        if len(reviews) > 100:
+            print(f"Слишком много отзывов ({len(reviews)}), ограничиваем до 100")
+            reviews = reviews[:100]
+            
         # Объединяем все отзывы в один текст
         reviews_text = "\n\n".join([f"Отзыв {i+1}: {review}" for i, review in enumerate(reviews)])
+        
+        # Если текст слишком длинный, обрезаем его
+        if len(reviews_text) > 10000:
+            print(f"Текст отзывов слишком длинный ({len(reviews_text)} символов), обрезаем до 10000")
+            reviews_text = reviews_text[:10000] + "..."
         
         # Формируем промпт для генерации персоны
         prompt = f"""На основе следующих отзывов о туши для ресниц, создай детальный портрет типичного покупателя.
@@ -34,8 +45,8 @@ class PersonaGenerator:
         выявленные из анализа отзывов."""
         
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4",
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Ты - эксперт по анализу потребительского поведения и созданию портретов целевой аудитории."},
                     {"role": "user", "content": prompt}
@@ -78,7 +89,7 @@ class PersonaGenerator:
         """
 
         try:
-            response = self.client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "Ты - эксперт по анализу потребительских отзывов. Твоя задача - создавать четкие и информативные обзоры на основе отзывов покупателей."},

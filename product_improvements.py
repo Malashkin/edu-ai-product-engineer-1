@@ -1,6 +1,6 @@
 import json
 import os
-from openai import OpenAI
+import openai
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -13,14 +13,15 @@ class ProductImprovements:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY не найден в переменных окружения")
-        self.client = OpenAI(api_key=api_key)
+        # Старая версия OpenAI имеет другую инициализацию
+        openai.api_key = api_key
     
     def get_latest_discussion_file(self):
         """Находит самый свежий файл с результатами дискуссии"""
-        files = [f for f in os.listdir() if f.startswith("mascara_discussion_")]
+        files = [f for f in os.listdir('output') if f.startswith("mascara_discussion_")]
         if not files:
             raise FileNotFoundError("Файл с результатами дискуссии не найден")
-        return max(files, key=os.path.getctime)
+        return max(files, key=lambda x: os.path.getctime(os.path.join('output', x)))
     
     def load_discussion_data(self, file_path=None):
         """Загружает данные дискуссии из файла"""
@@ -29,7 +30,7 @@ class ProductImprovements:
         
         print(f"Загрузка данных дискуссии из файла: {file_path}")
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(os.path.join('output', file_path), "r", encoding="utf-8") as f:
                 data = json.load(f)
             return data
         except Exception as e:
@@ -119,8 +120,8 @@ class ProductImprovements:
         
         # Отправляем запрос к OpenAI
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4",
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
@@ -155,7 +156,7 @@ class ProductImprovements:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 output_file = f"product_improvements_{timestamp}.txt"
                 
-                with open(output_file, "w", encoding="utf-8") as f:
+                with open(os.path.join('output', output_file), "w", encoding="utf-8") as f:
                     f.write(improvements)
                 
                 print(f"Рекомендации сохранены в файл: {output_file}")

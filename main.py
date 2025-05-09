@@ -83,12 +83,15 @@ def process_site_reviews(site_name, reviews, timestamp):
         
         # Генерируем персону на основе отзывов
         persona = persona_gen.generate_persona(part_reviews)
-        personas.append({
-            'site': site_name,
-            'part': part,
-            'based_on_reviews': len(part_reviews),
-            'persona': persona
-        })
+        if persona:
+            personas.append({
+                'site': site_name,
+                'part': part,
+                'based_on_reviews': len(part_reviews),
+                'persona': persona
+            })
+        else:
+            print(f"Не удалось сгенерировать персону для {site_name}, часть {part}")
     
     return personas
 

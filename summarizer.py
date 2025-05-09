@@ -1,6 +1,6 @@
 import json
 import os
-from openai import OpenAI
+import openai
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -10,7 +10,7 @@ load_dotenv()
 class DiscussionSummarizer:
     def __init__(self):
         """Инициализация клиента OpenAI"""
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        openai.api_key = os.getenv("OPENAI_API_KEY")
     
     def get_latest_discussion_file(self):
         """Находит самый свежий файл с результатами дискуссии"""
@@ -66,8 +66,8 @@ class DiscussionSummarizer:
         
         # Отправляем запрос к OpenAI
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4",
+            response = openai.ChatCompletion.create(
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}

@@ -5,7 +5,7 @@ import asyncio
 from agents.agent import Agent
 from agents.runner import Runner
 from dotenv import load_dotenv
-from openai import OpenAI
+import openai
 from datetime import datetime
 
 # Загружаем переменные окружения
@@ -21,7 +21,7 @@ class ProductType:
     def determine_product_type(personas):
         """Определяет тип продукта на основе персон"""
         # Инициализация клиента OpenAI
-        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        openai.api_key = os.getenv("OPENAI_API_KEY")
         
         # Формируем текст для анализа
         persona_samples = []
@@ -43,7 +43,7 @@ class ProductType:
 Ответь только номером варианта."""
         
         try:
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "Ты - аналитик, который определяет тип продукта по описаниям персон потребителей."},
@@ -130,6 +130,11 @@ def load_personas():
 
 def create_agent_from_persona(persona, product_type):
     """Создает агента на основе данных персоны"""
+    # Проверяем наличие персоны и ее данных
+    if not persona or 'persona' not in persona or not persona['persona']:
+        print(f"Пропускаю создание агента для персоны {persona.get('site', 'unknown')}_{persona.get('part', 'unknown')}, так как данные персоны отсутствуют")
+        return None
+        
     # Формируем имя агента из сайта и части
     agent_name = f"Persona_{persona['site']}_{persona['part']}"
     print(f"\nСоздание агента: {agent_name}")
@@ -205,10 +210,25 @@ def run_group_discussion():
     
     for persona in personas:
         agent = create_agent_from_persona(persona, product_type)
-        agents[agent.name] = agent
-        agent_list.append(agent)
-        runner.add_agent(agent)
+        if agent:
+            agents[agent.name] = agent
+            agent_list.append(agent)
+            runner.add_agent(agent)
     print(f"Создано {len(agents)} агентов")
+    
+    # Проверяем, что есть хотя бы один агент
+    if not agents:
+        print("Не удалось создать ни одного агента. Завершаем групповую дискуссию.")
+        # Создаем пустой файл результатов
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = f"mascara_discussion_{timestamp}.json"
+        empty_result = {
+            "topic": "Нет данных",
+            "error": "Не удалось создать агентов для дискуссии"
+        }
+        with open(os.path.join('output', output_file), "w", encoding="utf-8") as f:
+            json.dump(empty_result, f, ensure_ascii=False, indent=2)
+        return output_file
     
     # Настраиваем хэндофы для каждого агента
     print("\nНастройка связей между агентами...")

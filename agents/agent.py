@@ -1,6 +1,6 @@
 import os
 from typing import List, Dict, Any, Optional
-from openai import OpenAI
+import openai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,7 +12,8 @@ class Agent:
         self.temperature = temperature
         self.handoff_description = handoff_description
         self.handoffs = []
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Используем старую версию OpenAI
+        openai.api_key = os.getenv("OPENAI_API_KEY")
         self.conversation_history: List[Dict[str, Any]] = []
 
     def add_message(self, role: str, content: str) -> None:
@@ -51,8 +52,8 @@ class Agent:
         
         messages = [system_message] + self.conversation_history
         
-        response = self.client.chat.completions.create(
-            model="gpt-4",
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",
             messages=messages,
             temperature=self.temperature,
         )
