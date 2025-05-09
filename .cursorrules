@@ -1,0 +1,42 @@
+# Project Intelligence - AI Product Research Pipeline
+
+## File Structure Conventions
+- All output files are stored in the `output` directory
+- All documentation maintained in `memory-bank` directory
+- Python modules are in the root directory, organized by functionality
+- Agent-specific code is in the `agents` directory
+
+## Coding Style
+- No semicolons at end of lines (Python convention)
+- Use commas after last element in objects and arrays
+- OpenAI API calls should include error handling
+- When updating OpenAI API code, check version compatibility
+
+## Project-Specific Knowledge
+- The pipeline operates in sequential stages: scraping → persona generation → discussion → insight generation
+- All web scraping uses a combination of BeautifulSoup4 and Selenium
+- Personas are segmented by site and part number (e.g., `Persona_www.site.com_1`)
+- All components expect an `output` directory to exist
+
+## Error Handling Patterns
+- Components should check for None before accessing attributes
+- File paths should be handled with `os.path.join` for cross-platform compatibility
+- API calls should have try/except blocks with specific error messages
+- Web scraping should have fallback mechanisms
+
+## Performance Optimizations
+- Limit number of reviews processed (configurable)
+- Limit text length to avoid token limits (configurable)
+- Use appropriate OpenAI models for different complexity tasks
+
+## Development Workflow
+- Check .env for OpenAI API key before running
+- Create unit tests for new components
+- Update Memory Bank documentation when making significant changes
+- Record known issues in activeContext.md
+
+## Common Troubleshooting
+- If ChromeDriver fails, check if it's the correct version for your system
+- If OpenAI API calls fail, check API key and version compatibility
+- If discussions seem short or limited, check token limits in persona_generator.py
+- If output files aren't found, ensure the output directory exists 

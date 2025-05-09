@@ -11,15 +11,46 @@ from datetime import datetime
 # Загружаем переменные окружения
 load_dotenv()
 
-class ProductType:
-    """Определение типа продукта и генерация соответствующих вопросов"""
-    MASCARA = "mascara"
+class ItemType:
+    """Определение типа объекта отзывов и генерация соответствующих вопросов"""
+    COSMETICS = "cosmetics"
     APP = "app"
+    ELECTRONICS = "electronics"
     OTHER = "other"
     
     @staticmethod
-    def determine_product_type(personas):
-        """Определяет тип продукта на основе персон"""
+    def determine_item_type(personas):
+        """Определяет тип объекта отзывов на основе персон и информации из предыдущего этапа.
+        
+        Если в файле с персонами указан тип объекта, берем его.
+        Иначе пытаемся определить из текста персон.
+        """
+        try:
+            # Проверяем, есть ли в файле с персонами информация о типе объекта
+            latest_file = get_latest_personas_file()
+            with open(os.path.join('output', latest_file), 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            # Если в файле указан тип объекта, используем его
+            if 'item_type' in data:
+                item_type = data['item_type'].lower()
+                
+                # Преобразуем в константу класса
+                if item_type in ["cosmetics", "makeup"]:
+                    print(f"Определен тип объекта: косметика ({item_type})")
+                    return ItemType.COSMETICS
+                elif item_type in ["app", "mobile_app", "application", "software"]:
+                    print(f"Определен тип объекта: приложение ({item_type})")
+                    return ItemType.APP
+                elif item_type in ["electronics", "gadget", "device"]:
+                    print(f"Определен тип объекта: электроника ({item_type})")
+                    return ItemType.ELECTRONICS
+                else:
+                    print(f"Определен тип объекта: другой тип ({item_type})")
+                    return ItemType.OTHER
+        except Exception as e:
+            print(f"Ошибка при получении типа объекта из файла: {str(e)}")
+        
         # Инициализация клиента OpenAI
         openai.api_key = os.getenv("OPENAI_API_KEY")
         
@@ -30,15 +61,16 @@ class ProductType:
         
         combined_text = "\n\n".join(persona_samples)
         
-        # Формируем промпт для определения типа продукта
-        prompt = f"""Определи, о каком типе продукта идет речь в следующих описаниях персон:
+        # Формируем промпт для определения типа объекта
+        prompt = f"""Определи, о каком типе объекта идет речь в следующих описаниях персон:
 
 {combined_text}
 
 Выбери один из вариантов:
-1. Тушь для ресниц или другая косметика
+1. Косметика или средства ухода
 2. Мобильное приложение или программное обеспечение
-3. Другой тип продукта
+3. Электроника или гаджеты
+4. Другой тип объекта
 
 Ответь только номером варианта."""
         
@@ -46,7 +78,7 @@ class ProductType:
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "Ты - аналитик, который определяет тип продукта по описаниям персон потребителей."},
+                    {"role": "system", "content": "Ты - аналитик, который определяет тип объекта по описаниям персон потребителей."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.3,
@@ -56,27 +88,41 @@ class ProductType:
             answer = response.choices[0].message.content.strip()
             
             if "1" in answer:
-                print("Определен тип продукта: тушь для ресниц/косметика")
-                return ProductType.MASCARA
+                print("Определен тип объекта: косметика/средства ухода")
+                return ItemType.COSMETICS
             elif "2" in answer:
-                print("Определен тип продукта: мобильное приложение/ПО")
-                return ProductType.APP
+                print("Определен тип объекта: мобильное приложение/ПО")
+                return ItemType.APP
+            elif "3" in answer:
+                print("Определен тип объекта: электроника/гаджеты")
+                return ItemType.ELECTRONICS
             else:
-                print("Определен тип продукта: другой тип")
-                return ProductType.OTHER
+                print("Определен тип объекта: другой тип")
+                return ItemType.OTHER
                 
         except Exception as e:
-            print(f"Ошибка при определении типа продукта: {str(e)}")
+            print(f"Ошибка при определении типа объекта: {str(e)}")
             # По умолчанию возвращаем тип Other
-            return ProductType.OTHER
+            return ItemType.OTHER
     
     @staticmethod
-    def get_questions(product_type):
+    def get_questions(item_type, item_name=None):
         """Возвращает вопросы для индивидуального опроса и для групповой дискуссии"""
-        if product_type == ProductType.MASCARA:
-            individual_question = "Что для вас важно при выборе туши для ресниц? Расскажите о ваших предпочтениях и критериях выбора."
-            group_prompt = """Вы участвуете в групповой дискуссии о выборе туши для ресниц. 
-            Вопрос для обсуждения: "Какие критерии выбора туши для ресниц наиболее важны и почему?"
+        # Используем обобщенное название, если конкретное не указано
+        item_display_name = item_name or "этого объекта"
+        
+        # Конвертируем возможные None в строки
+        if item_type is None:
+            item_type = ItemType.OTHER
+            
+        if not item_display_name or item_display_name.lower() == "none":
+            item_display_name = "этого объекта"
+        
+        # Генерируем вопросы на основе типа объекта
+        if item_type == ItemType.COSMETICS:
+            individual_question = f"Что для вас важно при выборе {item_display_name}? Расскажите о ваших предпочтениях и критериях выбора косметики."
+            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе {item_display_name}. 
+            Вопрос для обсуждения: "Какие критерии выбора {item_display_name} наиболее важны и почему?"
             
             Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
             Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
@@ -85,10 +131,10 @@ class ProductType:
             
             Если вы считаете, что другой участник лучше ответит на конкретный вопрос - передайте ему слово."""
             
-        elif product_type == ProductType.APP:
-            individual_question = "Что для вас важно при выборе и использовании мобильных приложений? Расскажите о ваших предпочтениях и критериях оценки."
-            group_prompt = """Вы участвуете в групповой дискуссии о мобильных приложениях. 
-            Вопрос для обсуждения: "Какие функции и характеристики мобильных приложений наиболее важны для пользователей и почему?"
+        elif item_type == ItemType.APP:
+            individual_question = f"Что для вас важно при выборе и использовании {item_display_name}? Расскажите о ваших предпочтениях и критериях оценки."
+            group_prompt = f"""Вы участвуете в групповой дискуссии о приложениях. 
+            Вопрос для обсуждения: "Какие функции и характеристики {item_display_name} наиболее важны для пользователей и почему?"
             
             Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
             Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
@@ -97,10 +143,21 @@ class ProductType:
             
             Если вы считаете, что другой участник лучше ответит на конкретный вопрос - передайте ему слово."""
             
+        elif item_type == ItemType.ELECTRONICS:
+            individual_question = f"Что для вас важно при выборе {item_display_name}? Расскажите о ваших предпочтениях и критериях выбора электроники."
+            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе {item_display_name}. 
+            Вопрос для обсуждения: "Какие характеристики и функции {item_display_name} наиболее важны и почему?"
+            
+            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
+            Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
+            
+            При обращении к другим участникам, используйте их имена в квадратных скобках, например [Имя_участника].
+            
+            Если вы считаете, что другой участник лучше ответит на конкретный вопрос - передайте ему слово."""
         else:
-            individual_question = "Что для вас важно при выборе этого продукта? Расскажите о ваших предпочтениях и критериях выбора."
-            group_prompt = """Вы участвуете в групповой дискуссии о выборе продукта. 
-            Вопрос для обсуждения: "Какие критерии выбора этого продукта наиболее важны и почему?"
+            individual_question = f"Что для вас важно при выборе {item_display_name}? Расскажите о ваших предпочтениях и критериях выбора."
+            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе {item_display_name}. 
+            Вопрос для обсуждения: "Какие критерии выбора {item_display_name} наиболее важны и почему?"
             
             Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
             Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
@@ -128,7 +185,7 @@ def load_personas():
         data = json.load(f)
     return data.get('personas', [])
 
-def create_agent_from_persona(persona, product_type):
+def create_agent_from_persona(persona, item_type):
     """Создает агента на основе данных персоны"""
     # Проверяем наличие персоны и ее данных
     if not persona or 'persona' not in persona or not persona['persona']:
@@ -139,34 +196,11 @@ def create_agent_from_persona(persona, product_type):
     agent_name = f"Persona_{persona['site']}_{persona['part']}"
     print(f"\nСоздание агента: {agent_name}")
     
-    # Формируем роль агента и описание для хэндофа
-    if product_type == ProductType.MASCARA:
-        role_template = """You are a customer persona with the following characteristics:
+    # Формируем универсальную роль агента
+    role_template = """You are a customer persona with the following characteristics:
 {persona}
 
-When discussing mascara preferences and criteria, always stay in character and base your responses
-on your persona's characteristics, lifestyle, needs, and pain points.
-
-In the group discussion, you can refer to other participants by using their full names in brackets like [Persona_site_part].
-Always respond to the entire conversation context, not just the latest message.
-
-Respond in Russian language."""
-    elif product_type == ProductType.APP:
-        role_template = """You are a customer persona with the following characteristics:
-{persona}
-
-When discussing mobile app preferences and criteria, always stay in character and base your responses
-on your persona's characteristics, lifestyle, needs, and pain points.
-
-In the group discussion, you can refer to other participants by using their full names in brackets like [Persona_site_part].
-Always respond to the entire conversation context, not just the latest message.
-
-Respond in Russian language."""
-    else:
-        role_template = """You are a customer persona with the following characteristics:
-{persona}
-
-When discussing product preferences and criteria, always stay in character and base your responses
+When discussing preferences and criteria, always stay in character and base your responses
 on your persona's characteristics, lifestyle, needs, and pain points.
 
 In the group discussion, you can refer to other participants by using their full names in brackets like [Persona_site_part].
@@ -176,7 +210,7 @@ Respond in Russian language."""
     
     role = role_template.format(persona=persona['persona'])
     
-    handoff_description = f"Покупатель со следующими характеристиками: {persona['persona'][:100]}..."
+    handoff_description = f"Пользователь со следующими характеристиками: {persona['persona'][:100]}..."
     
     print(f"Роль агента сформирована, длина: {len(role)} символов")
     
@@ -187,8 +221,13 @@ Respond in Russian language."""
         temperature=0.7
     )
 
-def run_group_discussion():
-    """Запускает групповую дискуссию и возвращает результаты"""
+def run_group_discussion(item_type=None, item_name=None):
+    """Запускает групповую дискуссию и возвращает результаты
+    
+    Args:
+        item_type (str, optional): Тип объекта отзывов. Если None, будет определен автоматически.
+        item_name (str, optional): Название объекта. Если None, будет использовано обобщенное название.
+    """
     print("\nЗапуск групповой дискуссии...")
     
     # Создаем runner
@@ -199,17 +238,32 @@ def run_group_discussion():
     print("\nЗагрузка персон и создание агентов...")
     personas = load_personas()
     
-    # Определяем тип продукта
-    product_type = ProductType.determine_product_type(personas)
+    # Определяем тип объекта если не задан
+    if item_type is None:
+        item_type = ItemType.determine_item_type(personas)
+    else:
+        # Преобразуем тип объекта в константу класса
+        if item_type.lower() in ["cosmetics", "makeup"]:
+            item_type = ItemType.COSMETICS
+            print(f"Используем тип объекта: косметика ({item_type})")
+        elif item_type.lower() in ["app", "application", "software"]:
+            item_type = ItemType.APP
+            print(f"Используем тип объекта: приложение ({item_type})")
+        elif item_type.lower() in ["electronics", "gadget", "device"]:
+            item_type = ItemType.ELECTRONICS
+            print(f"Используем тип объекта: электроника ({item_type})")
+        else:
+            item_type = ItemType.OTHER
+            print(f"Используем тип объекта: другой тип ({item_type})")
     
-    # Получаем вопросы для данного типа продукта
-    individual_question, group_prompt = ProductType.get_questions(product_type)
+    # Получаем вопросы для данного типа объекта
+    individual_question, group_prompt = ItemType.get_questions(item_type, item_name)
     
     agents = {}
     agent_list = []
     
     for persona in personas:
-        agent = create_agent_from_persona(persona, product_type)
+        agent = create_agent_from_persona(persona, item_type)
         if agent:
             agents[agent.name] = agent
             agent_list.append(agent)
@@ -221,7 +275,7 @@ def run_group_discussion():
         print("Не удалось создать ни одного агента. Завершаем групповую дискуссию.")
         # Создаем пустой файл результатов
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"mascara_discussion_{timestamp}.json"
+        output_file = f"discussion_{timestamp}.json"
         empty_result = {
             "topic": "Нет данных",
             "error": "Не удалось создать агентов для дискуссии"
@@ -260,7 +314,7 @@ def run_group_discussion():
     # Выбираем первого агента для начала дискуссии
     first_agent_name = list(agents.keys())[0]
     
-    print(f"\nГрупповой промпт для типа продукта {product_type}:")
+    print(f"\nГрупповой промпт для типа объекта {item_type}:")
     print(group_prompt)
     
     print(f"Начинаем групповую дискуссию с агента: {first_agent_name}")
@@ -311,7 +365,7 @@ def run_group_discussion():
             # Если это первое сообщение, добавляем специальное приглашение к обсуждению
             messages.append({
                 "role": "user",
-                "content": f"Пожалуйста, начните дискуссию о критериях выбора {product_type}. Поделитесь своим мнением и опытом."
+                "content": f"Пожалуйста, начните дискуссию о критериях выбора {item_type}. Поделитесь своим мнением и опытом."
             })
             
         try:
@@ -343,18 +397,14 @@ def run_group_discussion():
     # Формируем результаты
     print("\nФормирование результатов дискуссии...")
     
-    # Определяем тему на основе типа продукта
-    if product_type == ProductType.MASCARA:
-        topic = "Критерии выбора туши для ресниц"
-    elif product_type == ProductType.APP:
-        topic = "Критерии выбора и оценки мобильных приложений"
-    else:
-        topic = "Критерии выбора продукта"
+    # Определяем тему на основе типа объекта
+    topic_text = f"Критерии выбора {item_name or item_type}"
     
     # Создаем структуру для результатов
     discussion_results = {
-        "topic": topic,
-        "product_type": product_type,
+        "topic": topic_text,
+        "item_type": item_type,
+        "item_name": item_name,
         "individual_question": individual_question,
         "group_prompt": group_prompt,
         "participants": [name for name in agents.keys()],
@@ -364,7 +414,7 @@ def run_group_discussion():
     
     # Сохраняем результаты в файл с тем же timestamp, что и у файла персон
     timestamp = get_latest_personas_file().split("_")[1].split(".")[0]
-    output_file = f"mascara_discussion_{timestamp}.json"
+    output_file = f"discussion_{timestamp}.json"
     
     print(f"\nСохранение результатов в файл: {output_file}")
     with open(os.path.join('output', output_file), "w", encoding="utf-8") as f:
@@ -380,7 +430,7 @@ async def run_group_discussion_async():
 def save_discussion_results(discussion_data):
     """Сохраняет результаты дискуссии в файл"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"mascara_discussion_{timestamp}.json"
+    filename = f"discussion_{timestamp}.json"
     
     with open(os.path.join('output', filename), 'w', encoding='utf-8') as f:
         json.dump(discussion_data, f, ensure_ascii=False, indent=2)

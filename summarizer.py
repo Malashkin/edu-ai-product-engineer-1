@@ -14,7 +14,7 @@ class DiscussionSummarizer:
     
     def get_latest_discussion_file(self):
         """Находит самый свежий файл с результатами дискуссии"""
-        files = [f for f in os.listdir('output') if f.startswith("mascara_discussion_")]
+        files = [f for f in os.listdir('output') if f.startswith("discussion_")]
         if not files:
             raise FileNotFoundError("Файл с результатами дискуссии не найден.")
         return max(files, key=lambda x: os.path.getctime(os.path.join('output', x)))
@@ -30,7 +30,7 @@ class DiscussionSummarizer:
         return data
     
     def generate_abstractive_summary(self, discussion_data):
-        """Генерирует абстрактное резюме дискуссии с ключевыми предложениями по улучшению товара"""
+        """Генерирует абстрактное резюме дискуссии с ключевыми предложениями по улучшению"""
         # Собираем все высказывания из групповой дискуссии
         all_messages = []
         for message in discussion_data.get("group_discussion", []):
@@ -42,20 +42,25 @@ class DiscussionSummarizer:
         # Объединяем все сообщения в одну строку для анализа
         full_discussion = "\n\n".join(all_messages)
         
-        # Получаем тему дискуссии
-        topic = discussion_data.get("topic", "Критерии выбора продукта")
+        # Получаем тему дискуссии и название объекта
+        topic = discussion_data.get("topic", "Критерии выбора")
+        item_name = discussion_data.get("item_name", None)
+        item_type = discussion_data.get("item_type", "объекта")
+        
+        # Определяем название объекта для промпта
+        object_name = item_name if item_name and item_name.lower() != "none" else item_type
         
         # Формируем промпт
-        system_prompt = "Ты - эксперт по анализу групповых дискуссий и выделению ключевых инсайтов для улучшения продуктов."
+        system_prompt = "Ты - эксперт по анализу групповых дискуссий и выделению ключевых инсайтов для улучшения."
         prompt = f"""Проанализируй следующую групповую дискуссию на тему "{topic}" и 
-        выдели 2-3 ключевых предложения по улучшению продукта.
+        выдели 2-3 ключевых предложения по улучшению {object_name}.
         
-        Особое внимание удели конкретным требованиям и аспектам продукта, упомянутым в дискуссии.
+        Особое внимание удели конкретным требованиям и аспектам {object_name}, упомянутым в дискуссии.
         Выдели только самые значимые и повторяющиеся мнения участников дискуссии.
         
         Твой ответ должен быть в формате:
         
-        КЛЮЧЕВЫЕ ПРЕДЛОЖЕНИЯ ПО УЛУЧШЕНИЮ ПРОДУКТА:
+        КЛЮЧЕВЫЕ ПРЕДЛОЖЕНИЯ ПО УЛУЧШЕНИЮ:
         1. [Первое предложение]
         2. [Второе предложение]
         3. [Третье предложение, если есть]

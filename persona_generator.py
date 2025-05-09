@@ -13,36 +13,77 @@ class PersonaGenerator:
         # Старая версия OpenAI имеет другую инициализацию
         openai.api_key = os.getenv("OPENAI_API_KEY")
     
-    def generate_persona(self, reviews):
-        """Генерирует персону на основе отзывов"""
+    def generate_persona(self, reviews, category=None):
+        """Генерирует персону на основе отзывов
+        
+        Args:
+            reviews: Список отзывов для анализа
+            category: Категория объекта отзывов (может быть None, тогда будет определена автоматически)
+        """
         # Ограничиваем количество отзывов для избежания превышения лимита токенов
         if len(reviews) > 100:
             print(f"Слишком много отзывов ({len(reviews)}), ограничиваем до 100")
             reviews = reviews[:100]
             
+        # Преобразуем словари в строки, если нужно
+        review_texts = []
+        for review in reviews:
+            if isinstance(review, dict) and 'text' in review:
+                review_texts.append(f"Отзыв: {review['text']}")
+            elif isinstance(review, str):
+                review_texts.append(f"Отзыв: {review}")
+            
         # Объединяем все отзывы в один текст
-        reviews_text = "\n\n".join([f"Отзыв {i+1}: {review}" for i, review in enumerate(reviews)])
+        reviews_text = "\n\n".join(review_texts)
         
         # Если текст слишком длинный, обрезаем его
         if len(reviews_text) > 10000:
             print(f"Текст отзывов слишком длинный ({len(reviews_text)} символов), обрезаем до 10000")
             reviews_text = reviews_text[:10000] + "..."
         
-        # Формируем промпт для генерации персоны
-        prompt = f"""На основе следующих отзывов о туши для ресниц, создай детальный портрет типичного покупателя.
+        # Автоматически определяем категорию, если не задана
+        if category is None:
+            # Берем малую выборку отзывов для быстрого анализа
+            sample_reviews = reviews[:5]
+            sample_text = "\n\n".join(sample_reviews)
+            
+            # Ограничиваем длину текста
+            if len(sample_text) > 1000:
+                sample_text = sample_text[:1000] + "..."
+            
+            # Запрос к API для определения категории
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "Ты - эксперт по анализу отзывов. Определи категорию объекта отзывов."},
+                        {"role": "user", "content": f"На основе этих отзывов, определи основную категорию объекта отзывов. Отвечай одним словом.\n\n{sample_text}"}
+                    ],
+                    temperature=0.3,
+                    max_tokens=20
+                )
+                
+                category = response.choices[0].message.content.strip().lower()
+                print(f"Автоматически определена категория объекта: {category}")
+            except Exception as e:
+                print(f"Ошибка при автоматическом определении категории объекта: {str(e)}")
+                category = "unknown"  # значение по умолчанию
+        
+        # Формируем универсальный промпт для любого типа объекта отзывов
+        prompt = f"""На основе следующих отзывов, создай детальный портрет типичного потребителя/пользователя.
         
         Включи в описание:
-        1. Демографические характеристики (возраст, пол, социальный статус)
-        2. Потребности и болевые точки
-        3. Критерии выбора продукта
+        1. Демографические характеристики (возраст, пол, социальный статус, если применимо)
+        2. Ключевые потребности и болевые точки
+        3. Критерии выбора и оценки
         4. Предпочтения в использовании
-        5. Ожидания от продукта
+        5. Ожидания и требования
         
         Отзывы:
         {reviews_text}
         
         Создай подробное описание персоны, которое отражает общие характеристики и потребности, 
-        выявленные из анализа отзывов."""
+        выявленные из анализа отзывов. Адаптируй описание к типу объекта отзывов."""
         
         try:
             response = openai.ChatCompletion.create(
@@ -58,15 +99,15 @@ class PersonaGenerator:
             return response.choices[0].message.content
             
         except Exception as e:
-            print(f"Error generating persona: {str(e)}")
+            print(f"Ошибка при генерации персоны: {str(e)}")
             return None
 
     def generate_reviews_summary(self, reviews):
-        """Generate a summary of reviews using OpenAI API"""
+        """Генерирует краткую сводку отзывов с помощью OpenAI API"""
         # Извлекаем только текст отзывов
         reviews_text = []
         for review in reviews:
-            if isinstance(review, dict):
+            if isinstance(review, dict) and 'text' in review:
                 text = review.get('text', '')
                 if text and not text.startswith('Комментарий:') and not text.startswith('Отзывы') and not text.startswith('Срок использования:'):
                     reviews_text.append(text)
@@ -75,12 +116,12 @@ class PersonaGenerator:
                     reviews_text.append(review)
         
         # Формируем промпт для OpenAI
-        prompt = f"""Проанализируй следующие отзывы о туши для ресниц и создай краткое саммари, 
+        prompt = f"""Проанализируй следующие отзывы и создай краткое саммари, 
         которое описывает основные тенденции в отзывах, включая:
         - Общее впечатление пользователей
         - Основные положительные моменты
         - Основные отрицательные моменты
-        - Часто упоминаемые характеристики продукта
+        - Часто упоминаемые характеристики объекта отзывов
 
         Отзывы для анализа:
         {' | '.join(reviews_text)}
@@ -92,7 +133,7 @@ class PersonaGenerator:
             response = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "Ты - эксперт по анализу потребительских отзывов. Твоя задача - создавать четкие и информативные обзоры на основе отзывов покупателей."},
+                    {"role": "system", "content": "Ты - эксперт по анализу отзывов. Твоя задача - создавать четкие и информативные обзоры на основе отзывов."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
@@ -102,11 +143,11 @@ class PersonaGenerator:
             return response.choices[0].message.content
             
         except Exception as e:
-            print(f"Error generating summary: {str(e)}")
+            print(f"Ошибка при генерации сводки: {str(e)}")
             return None
 
     def process_reviews_batch(self, reviews_file, batch_size=15):
-        """Process reviews in batches and generate personas"""
+        """Обрабатывает отзывы группами и генерирует персоны"""
         # Загружаем отзывы
         with open(reviews_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -147,12 +188,12 @@ class PersonaGenerator:
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, ensure_ascii=False, indent=4)
             
-            print(f"\nGenerated {len(personas)} personas")
-            print(f"Results saved to: {output_file}")
+            print(f"\nСгенерировано {len(personas)} персон")
+            print(f"Результаты сохранены в: {output_file}")
             
         return personas
 
 if __name__ == "__main__":
     # Пример использования
     generator = PersonaGenerator()
-    generator.process_reviews_batch("reviews_20250424_155400.json") 
+    generator.process_reviews_batch("output/reviews_latest.json") 
