@@ -241,54 +241,69 @@ Respond in Russian language."""
         temperature=0.7
     )
 
-def run_group_discussion(item_type=None, item_name=None):
-    """Запускает групповую дискуссию и возвращает результаты
+def run_group_discussion(item_type="unknown", item_name="item", custom_personas=None):
+    """Запускает процесс групповой дискуссии
     
     Args:
-        item_type (str, optional): Тип объекта отзывов. Если None, будет определен автоматически.
-        item_name (str, optional): Название объекта. Если None, будет использовано обобщенное название.
+        item_type: Тип объекта для обсуждения
+        item_name: Название объекта для обсуждения
+        custom_personas: Список персон для использования (если не указан, будут загружены из последнего файла)
+        
+    Returns:
+        str: Имя файла с результатами дискуссии
     """
     print("\nЗапуск групповой дискуссии...")
     
-    # Создаем runner
+    # Инициализируем раннер
     print("Инициализация Runner...")
     runner = Runner()
     
     # Загружаем персоны и создаем агентов
     print("\nЗагрузка персон и создание агентов...")
-    personas = load_personas()
     
-    # Определяем тип объекта если не задан
-    if item_type is None:
-        item_type = ItemType.determine_item_type(personas)
-    else:
-        # Преобразуем тип объекта в константу класса
+    # Преобразуем тип объекта в константу класса, если это строка
+    if isinstance(item_type, str):
         if item_type.lower() in ["cosmetics", "makeup"]:
-            item_type = ItemType.COSMETICS
-            print(f"Используем тип объекта: косметика ({item_type})")
+            item_type_val = ItemType.COSMETICS
+            print(f"Используем тип объекта: косметика ({item_type_val})")
         elif item_type.lower() in ["app", "application", "software"]:
-            item_type = ItemType.APP
-            print(f"Используем тип объекта: приложение ({item_type})")
+            item_type_val = ItemType.APP
+            print(f"Используем тип объекта: приложение ({item_type_val})")
         elif item_type.lower() in ["electronics", "gadget", "device"]:
-            item_type = ItemType.ELECTRONICS
-            print(f"Используем тип объекта: электроника ({item_type})")
+            item_type_val = ItemType.ELECTRONICS
+            print(f"Используем тип объекта: электроника ({item_type_val})")
         else:
-            item_type = ItemType.OTHER
-            print(f"Используем тип объекта: другой тип ({item_type})")
+            item_type_val = ItemType.OTHER
+            print(f"Используем тип объекта: другой тип ({item_type_val})")
+    else:
+        item_type_val = item_type  # Если уже является объектом ItemType
     
     # Получаем вопросы для данного типа объекта
-    individual_question, group_prompt = ItemType.get_questions(item_type, item_name)
+    individual_question, group_prompt = ItemType.get_questions(item_type_val, item_name)
     
+    # Создаем агентов
     agents = {}
     agent_list = []
     
-    for persona in personas:
-        agent = create_agent_from_persona(persona, item_type)
-        if agent:
-            agents[agent.name] = agent
+    if custom_personas:
+        # Используем переданные персоны
+        for i, persona in enumerate(custom_personas, 1):
+            agent_name = f"Custom_Persona_{i}"
+            agent = Agent(agent_name, persona)
+            agents[agent_name] = agent
             agent_list.append(agent)
             runner.add_agent(agent)
-    print(f"Создано {len(agents)} агентов")
+        print(f"Создано {len(agents)} агентов из пользовательских персон")
+    else:
+        # Загружаем персоны из файла
+        personas = load_personas()
+        for persona in personas:
+            agent = create_agent_from_persona(persona, item_type_val)
+            if agent:
+                agents[agent.name] = agent
+                agent_list.append(agent)
+                runner.add_agent(agent)
+        print(f"Создано {len(agents)} агентов")
     
     # Проверяем, что есть хотя бы один агент
     if not agents:
@@ -367,9 +382,9 @@ def run_group_discussion(item_type=None, item_name=None):
 Список участников дискуссии:
 {participants}
 
-Вы - {current_agent_name}. Всегда оставайтесь в своей роли и обращайтесь к другим участникам по их именам в квадратных скобках, например [Persona_site_part].
+Вы - {current_agent_name}. Всегда оставайтесь в своей роли и обращайтесь к другим участникам по их именам в квадратных скобках, например [Custom_Persona_1].
 
-Если вы хотите задать вопрос конкретному участнику или передать ему слово, обязательно укажите его имя в квадратных скобках в конце вашего сообщения. Например: "А что вы думаете об этом, [Persona_site_part]?"
+Если вы хотите задать вопрос конкретному участнику или передать ему слово, обязательно укажите его имя в квадратных скобках в конце вашего сообщения. Например: "А что вы думаете об этом, [Custom_Persona_2]?"
 
 Старайтесь задавать содержательные вопросы другим участникам, чтобы дискуссия была информативной и раскрывала разные аспекты темы.
 """
@@ -394,7 +409,7 @@ def run_group_discussion(item_type=None, item_name=None):
             # Если это первое сообщение, добавляем специальное приглашение к обсуждению
             messages.append({
                 "role": "user",
-                "content": f"Пожалуйста, начните дискуссию о критериях выбора {item_type}. Поделитесь своим мнением и опытом."
+                "content": f"Пожалуйста, начните дискуссию о критериях выбора {item_name}. Поделитесь своим мнением и опытом."
             })
             
         try:
@@ -455,8 +470,8 @@ def run_group_discussion(item_type=None, item_name=None):
         "group_discussion": discussion_history
     }
     
-    # Сохраняем результаты в файл с тем же timestamp, что и у файла персон
-    timestamp = get_latest_personas_file().split("_")[1].split(".")[0]
+    # Сохраняем результаты в файл с текущим timestamp
+    timestamp = datetime.now().strftime("%Y%m%d")
     output_file = f"discussion_{timestamp}.json"
     
     print(f"\nСохранение результатов в файл: {output_file}")

@@ -144,6 +144,200 @@ class Recommendations:
             print(f"Ошибка при анализе дискуссии: {str(e)}")
             return None
 
+    def analyze_from_classified_data(self, analysis_data):
+        """Анализирует данные классифицированных отзывов и создает рекомендации
+        
+        Args:
+            analysis_data: Данные анализа (суммаризированные отзывы и результаты дискуссий)
+            
+        Returns:
+            str: Имя файла с рекомендациями
+        """
+        print("Генерация рекомендаций на основе классифицированных отзывов...")
+        
+        # Создаем структуру для хранения всех аспектов анализа
+        all_aspects = {
+            "bug_fixes": [],
+            "feature_improvements": [],
+            "ux_improvements": [],
+            "performance_improvements": [],
+            "stability_improvements": []
+        }
+        
+        # Обрабатываем отчеты о багах
+        if 'bug_reports' in analysis_data and analysis_data['bug_reports']['summarized']:
+            for bug_group in analysis_data['bug_reports']['summarized']:
+                # Если это не словарь, пропускаем
+                if not isinstance(bug_group, dict):
+                    continue
+                    
+                # Извлекаем информацию о группе багов
+                group_name = bug_group.get('group_name', 'Неизвестная проблема')
+                summary = bug_group.get('summary', 'Нет описания')
+                count = bug_group.get('count', 1)
+                
+                # Добавляем в соответствующий раздел
+                all_aspects["bug_fixes"].append({
+                    "issue": group_name,
+                    "description": summary,
+                    "count": count,
+                    "priority": "high" if count > 3 else "medium"
+                })
+        
+        # Обрабатываем запросы функций
+        if 'feature_requests' in analysis_data and analysis_data['feature_requests']['summarized']:
+            for feature_group in analysis_data['feature_requests']['summarized']:
+                # Если это не словарь, пропускаем
+                if not isinstance(feature_group, dict):
+                    continue
+                    
+                # Извлекаем информацию о группе запросов
+                group_name = feature_group.get('group_name', 'Неизвестная функция')
+                summary = feature_group.get('summary', 'Нет описания')
+                count = feature_group.get('count', 1)
+                
+                # Добавляем в соответствующий раздел
+                all_aspects["feature_improvements"].append({
+                    "feature": group_name,
+                    "description": summary,
+                    "count": count,
+                    "priority": "high" if count > 3 else "medium"
+                })
+        
+        # Добавляем данные из дискуссий, если они есть
+        if 'bug_discussion_summary' in analysis_data and analysis_data['bug_discussion_summary']:
+            # Обрабатываем результаты дискуссии о багах
+            self._extract_discussion_insights(
+                analysis_data['bug_discussion_summary'],
+                all_aspects,
+                "stability_improvements"
+            )
+            
+        if 'feature_discussion_summary' in analysis_data and analysis_data['feature_discussion_summary']:
+            # Обрабатываем результаты дискуссии о функциях
+            self._extract_discussion_insights(
+                analysis_data['feature_discussion_summary'],
+                all_aspects,
+                "ux_improvements"
+            )
+        
+        # Формируем итоговые рекомендации
+        recommendations = self._generate_final_recommendations(all_aspects)
+        
+        # Сохраняем результаты в файл
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        result_file = f"final_recommendations_{timestamp}.json"
+        
+        try:
+            with open(os.path.join('output', result_file), 'w', encoding='utf-8') as f:
+                json.dump(recommendations, f, ensure_ascii=False, indent=2)
+            
+            print(f"Рекомендации сохранены в файл: {result_file}")
+            return result_file
+            
+        except Exception as e:
+            print(f"Ошибка при сохранении рекомендаций: {str(e)}")
+            return None
+    
+    def _extract_discussion_insights(self, discussion_text, all_aspects, aspect_key):
+        """Извлекает инсайты из текста дискуссии
+        
+        Args:
+            discussion_text: Текст дискуссии или резюме
+            all_aspects: Словарь со всеми аспектами рекомендаций
+            aspect_key: Ключ для добавления инсайтов
+        """
+        # Проверяем, что текст дискуссии не пустой
+        if not discussion_text:
+            return
+            
+        # Разбиваем текст дискуссии на строки
+        lines = discussion_text.strip().split('\n')
+        
+        # Ищем строки с предложениями (обычно они начинаются с цифр)
+        suggestions = []
+        
+        for line in lines:
+            # Если строка начинается с цифры или содержит характерные маркеры
+            if (line.strip() and (line.strip()[0].isdigit() or line.strip().startswith('-'))):
+                suggestions.append(line.strip())
+        
+        # Добавляем найденные предложения в соответствующий раздел
+        for i, suggestion in enumerate(suggestions):
+            # Убираем цифры и символы в начале строки
+            clean_suggestion = suggestion
+            while clean_suggestion and (clean_suggestion[0].isdigit() or clean_suggestion[0] in '.-:) '):
+                clean_suggestion = clean_suggestion[1:].strip()
+                
+            if clean_suggestion:
+                all_aspects[aspect_key].append({
+                    "improvement": f"Обсуждение {i+1}",
+                    "description": clean_suggestion,
+                    "source": "discussion",
+                    "priority": "medium"
+                })
+    
+    def _generate_final_recommendations(self, all_aspects):
+        """Генерирует финальные рекомендации на основе всех аспектов
+        
+        Args:
+            all_aspects: Словарь со всеми аспектами рекомендаций
+            
+        Returns:
+            dict: Структурированные рекомендации
+        """
+        # Создаем структуру для рекомендаций
+        recommendations = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "summary": {
+                "total_issues": len(all_aspects["bug_fixes"]),
+                "total_feature_requests": len(all_aspects["feature_improvements"]),
+                "total_ux_improvements": len(all_aspects["ux_improvements"]),
+                "total_performance_improvements": len(all_aspects["performance_improvements"]),
+                "total_stability_improvements": len(all_aspects["stability_improvements"])
+            },
+            "high_priority_recommendations": [],
+            "medium_priority_recommendations": [],
+            "low_priority_recommendations": []
+        }
+        
+        # Обрабатываем каждый аспект и добавляем рекомендации
+        priority_mapping = {
+            "bug_fixes": "high",
+            "feature_improvements": "medium",
+            "ux_improvements": "medium",
+            "performance_improvements": "medium",
+            "stability_improvements": "high"
+        }
+        
+        for aspect_key, items in all_aspects.items():
+            default_priority = priority_mapping.get(aspect_key, "medium")
+            
+            for item in items:
+                priority = item.get("priority", default_priority)
+                
+                recommendation = {
+                    "category": aspect_key,
+                    "title": item.get("issue", item.get("feature", item.get("improvement", "Рекомендация"))),
+                    "description": item.get("description", "Нет описания"),
+                    "user_impact": "high" if priority == "high" else "medium",
+                    "implementation_complexity": "medium"  # По умолчанию средняя сложность
+                }
+                
+                # Добавляем рекомендацию в соответствующий раздел по приоритету
+                if priority == "high":
+                    recommendations["high_priority_recommendations"].append(recommendation)
+                elif priority == "medium":
+                    recommendations["medium_priority_recommendations"].append(recommendation)
+                else:
+                    recommendations["low_priority_recommendations"].append(recommendation)
+        
+        # Сортируем рекомендации по категориям внутри приоритетов
+        for priority_list in ["high_priority_recommendations", "medium_priority_recommendations", "low_priority_recommendations"]:
+            recommendations[priority_list] = sorted(recommendations[priority_list], key=lambda x: x["category"])
+        
+        return recommendations
+
 if __name__ == "__main__":
     # Пример использования
     analyzer = Recommendations()
