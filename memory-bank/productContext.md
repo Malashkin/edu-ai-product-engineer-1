@@ -1,6 +1,7 @@
 # Product Context
 
 ## Problem Statement
+
 Traditional product research methods like focus groups and surveys have significant limitations:
 
 1. **High Costs**: Recruiting participants, facilitating sessions, and analyzing results is expensive
@@ -13,11 +14,13 @@ This project addresses these challenges by creating an AI-powered system that ca
 ## User Journey
 
 ### For Product Researchers & Marketers
+
 1. **Input**: Provide URLs to e-commerce sites with product reviews
 2. **Processing**: The system scrapes reviews, generates personas, and runs simulated discussions automatically
 3. **Output**: Receive detailed summaries and product improvement recommendations
 
 The system enables product teams to:
+
 - Rapidly iterate on product ideas based on customer feedback
 - Understand customer needs across different segments
 - Identify specific improvement opportunities
@@ -35,11 +38,13 @@ The system enables product teams to:
 ## Target Users
 
 ### Primary
+
 - Product Managers
 - Marketing Researchers
 - R&D Teams
 
 ### Secondary
+
 - Executive Decision Makers
 - Consumer Insights Teams
 - Product Designers
@@ -47,7 +52,8 @@ The system enables product teams to:
 ## Current Deployment
 
 The system is currently being used for cosmetics products research, specifically mascara, with plans to expand to:
+
 1. Other cosmetics categories
 2. Personal care products
 3. Consumer electronics
-4. Mobile applications 
+4. Mobile applications

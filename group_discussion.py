@@ -121,10 +121,15 @@ class ItemType:
         # Генерируем вопросы на основе типа объекта
         if item_type == ItemType.COSMETICS:
             individual_question = f"Что для вас важно при выборе {item_display_name}? Расскажите о ваших предпочтениях и критериях выбора косметики."
-            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе {item_display_name}. 
-            Вопрос для обсуждения: "Какие критерии выбора {item_display_name} наиболее важны и почему?"
+            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе и оценке {item_display_name}. 
             
-            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
+            Основные вопросы для обсуждения: 
+            1. Какие критерии выбора {item_display_name} наиболее важны и почему?
+            2. Какие проблемы вы испытываете при выборе или использовании этого типа косметики?
+            3. Что бы вы улучшили в существующих продуктах данной категории?
+            
+            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника. Важно не просто высказать свое мнение, но и поддержать диалог.
+            
             Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
             
             При обращении к другим участникам, используйте их имена в квадратных скобках, например [Имя_участника].
@@ -133,10 +138,15 @@ class ItemType:
             
         elif item_type == ItemType.APP:
             individual_question = f"Что для вас важно при выборе и использовании {item_display_name}? Расскажите о ваших предпочтениях и критериях оценки."
-            group_prompt = f"""Вы участвуете в групповой дискуссии о приложениях. 
-            Вопрос для обсуждения: "Какие функции и характеристики {item_display_name} наиболее важны для пользователей и почему?"
+            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе и использовании приложений. 
             
-            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
+            Основные вопросы для обсуждения: 
+            1. Какие функции и характеристики {item_display_name} наиболее важны для пользователей и почему?
+            2. С какими проблемами или неудобствами вы сталкиваетесь при использовании подобных приложений?
+            3. Какие улучшения или новые функции вы бы хотели видеть в будущих версиях?
+            
+            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника. Важно не просто высказать свое мнение, но и поддержать диалог.
+            
             Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
             
             При обращении к другим участникам, используйте их имена в квадратных скобках, например [Имя_участника].
@@ -145,10 +155,15 @@ class ItemType:
             
         elif item_type == ItemType.ELECTRONICS:
             individual_question = f"Что для вас важно при выборе {item_display_name}? Расскажите о ваших предпочтениях и критериях выбора электроники."
-            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе {item_display_name}. 
-            Вопрос для обсуждения: "Какие характеристики и функции {item_display_name} наиболее важны и почему?"
+            group_prompt = f"""Вы участвуете в групповой дискуссии о выборе электронных устройств. 
             
-            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
+            Основные вопросы для обсуждения: 
+            1. Какие характеристики и функции {item_display_name} наиболее важны и почему?
+            2. С какими проблемами вы сталкиваетесь при выборе или использовании таких устройств?
+            3. Какие инновации или улучшения вы бы хотели видеть в будущих моделях?
+            
+            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника. Важно не просто высказать свое мнение, но и поддержать диалог.
+            
             Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
             
             При обращении к другим участникам, используйте их имена в квадратных скобках, например [Имя_участника].
@@ -157,9 +172,14 @@ class ItemType:
         else:
             individual_question = f"Что для вас важно при выборе {item_display_name}? Расскажите о ваших предпочтениях и критериях выбора."
             group_prompt = f"""Вы участвуете в групповой дискуссии о выборе {item_display_name}. 
-            Вопрос для обсуждения: "Какие критерии выбора {item_display_name} наиболее важны и почему?"
             
-            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника.
+            Основные вопросы для обсуждения: 
+            1. Какие критерии выбора {item_display_name} наиболее важны и почему?
+            2. С какими проблемами или трудностями вы сталкиваетесь при выборе или использовании?
+            3. Что можно было бы улучшить в существующих вариантах на рынке?
+            
+            Поделитесь своим мнением и опытом, а затем задайте вопрос или прокомментируйте ответ другого участника. Важно не просто высказать свое мнение, но и поддержать диалог.
+            
             Оставайтесь в характере вашей персоны, опирайтесь на свои потребности и болевые точки.
             
             При обращении к другим участникам, используйте их имена в квадратных скобках, например [Имя_участника].
@@ -323,13 +343,18 @@ def run_group_discussion(item_type=None, item_name=None):
     discussion_history = []
     
     # Максимальное количество передач слова в дискуссии
-    max_turns = 6
+    max_turns = 15  # Увеличиваем максимальное количество ходов
+    min_turns = 4   # Минимальное количество ходов перед проверкой на завершение
     
     # Сформируем список участников
     participants = "\n".join([f"- {name}" for name in agents.keys()])
     
     # Инициируем дискуссию
     current_agent_name = first_agent_name
+    
+    # Флаг для отслеживания, когда можно проверять на завершение
+    can_check_completion = False
+    
     for turn in range(max_turns):
         print(f"Ход {turn+1}/{max_turns}: агент {current_agent_name}")
         
@@ -342,7 +367,11 @@ def run_group_discussion(item_type=None, item_name=None):
 Список участников дискуссии:
 {participants}
 
-Вы - {current_agent_name}. Всегда оставайтесь в своей роли и обращайтесь к другим участникам по их именам.
+Вы - {current_agent_name}. Всегда оставайтесь в своей роли и обращайтесь к другим участникам по их именам в квадратных скобках, например [Persona_site_part].
+
+Если вы хотите задать вопрос конкретному участнику или передать ему слово, обязательно укажите его имя в квадратных скобках в конце вашего сообщения. Например: "А что вы думаете об этом, [Persona_site_part]?"
+
+Старайтесь задавать содержательные вопросы другим участникам, чтобы дискуссия была информативной и раскрывала разные аспекты темы.
 """
         messages.append({
             "role": "system",
@@ -381,14 +410,28 @@ def run_group_discussion(item_type=None, item_name=None):
             
             print(f"Получен ответ от {current_agent_name}, длина: {len(result)} символов")
             
-            # Определяем, нужно ли передать слово другому агенту
-            # Для простоты, просто выбираем следующего агента по списку
-            agent_names = list(agents.keys())
-            current_index = agent_names.index(current_agent_name)
-            next_index = (current_index + 1) % len(agent_names)
-            current_agent_name = agent_names[next_index]
+            # После минимального количества ходов проверяем, стоит ли продолжать дискуссию
+            if turn + 1 >= min_turns:
+                can_check_completion = True
             
-            print(f"Передаем слово агенту: {current_agent_name}")
+            # Проверяем, стоит ли завершить дискуссию
+            if can_check_completion and should_end_discussion(discussion_history, item_type):
+                print(f"Дискуссия достигла логического завершения после {turn+1} ходов")
+                break
+            
+            # Определяем, нужно ли передать слово другому агенту
+            # Пытаемся найти обращение к другому агенту в формате [Persona_*]
+            agent_names = list(agents.keys())
+            next_agent_name = find_next_agent_in_text(result, agent_names)
+            if next_agent_name and next_agent_name != current_agent_name:
+                print(f"Передаем слово агенту {next_agent_name} на основе обращения в тексте")
+                current_agent_name = next_agent_name
+            else:
+                # Если не нашли явного обращения, выбираем следующего по списку
+                current_index = agent_names.index(current_agent_name)
+                next_index = (current_index + 1) % len(agent_names)
+                current_agent_name = agent_names[next_index]
+                print(f"Передаем слово следующему агенту: {current_agent_name}")
             
         except Exception as e:
             print(f"Ошибка в дискуссии при ходе агента {current_agent_name}: {str(e)}")
@@ -437,6 +480,170 @@ def save_discussion_results(discussion_data):
     
     print(f"\nРезультаты дискуссии сохранены в файл: {filename}")
     return filename
+
+def should_end_discussion(discussion_history, item_type):
+    """Анализирует историю дискуссии и определяет, стоит ли ее продолжать
+    
+    Args:
+        discussion_history: История дискуссии
+        item_type: Тип объекта обсуждения
+        
+    Returns:
+        bool: True, если дискуссию стоит завершить, False - если продолжить
+    """
+    # Если менее 4 сообщений, точно продолжаем
+    if len(discussion_history) < 4:
+        return False
+    
+    # Получаем последние 4 сообщения для анализа
+    last_messages = discussion_history[-4:]
+    
+    # Собираем метрики с помощью эвристик
+    repeating_ideas = check_repeating_ideas(last_messages)
+    decreasing_informativeness = check_decreasing_informativeness(last_messages)
+    formal_responses = check_formal_responses(last_messages)
+    
+    # Вывод метрик для отладки
+    print(f"Метрики завершения дискуссии (эвристика): повторения={repeating_ideas}, снижение информативности={decreasing_informativeness}, формальные ответы={formal_responses}")
+    
+    # Если все предыдущие метрики отрицательные, просим AI проанализировать дискуссию
+    if not (repeating_ideas or decreasing_informativeness or formal_responses) and len(discussion_history) >= 6:
+        # Используем AI для анализа дискуссии, только если у нас уже минимум 6 сообщений
+        ai_completion_score = analyze_discussion_with_ai(discussion_history, item_type)
+        print(f"Метрика завершения дискуссии (AI): {ai_completion_score}")
+        
+        # Если AI считает, что дискуссия исчерпана, завершаем
+        if ai_completion_score:
+            return True
+    
+    # Если 2 из 3 условий выполняются, можно завершать
+    heuristic_score = sum([repeating_ideas, decreasing_informativeness, formal_responses])
+    return heuristic_score >= 2
+
+def analyze_discussion_with_ai(discussion_history, item_type):
+    """Анализирует дискуссию с помощью OpenAI API для определения, исчерпана ли тема
+    
+    Args:
+        discussion_history: История дискуссии
+        item_type: Тип объекта обсуждения
+        
+    Returns:
+        bool: True, если дискуссию стоит завершить, False - если продолжить
+    """
+    try:
+        # Берем только последние 6 сообщений для анализа, чтобы уменьшить количество токенов
+        recent_messages = discussion_history[-6:]
+        
+        # Формируем текст дискуссии для анализа
+        discussion_text = "\n\n".join([f"[{msg['agent']}]: {msg['content']}" for msg in recent_messages])
+        
+        # Промпт для анализа
+        prompt = f"""Проанализируй текущую дискуссию на тему выбора {item_type} и определи, исчерпана ли тема обсуждения.
+        
+        Дискуссия исчерпана, если выполняется хотя бы один из критериев:
+        1. Участники начали повторять одни и те же идеи
+        2. Снизилась информативность сообщений (короткие формальные ответы)
+        3. Тема полностью раскрыта (обсуждены все ключевые аспекты)
+        
+        Вот последние сообщения дискуссии:
+        
+        {discussion_text}
+        
+        Ответь ТОЛЬКО "да" или "нет":
+        - "да" - если дискуссия исчерпана и ее можно завершать
+        - "нет" - если есть смысл продолжать дискуссию
+        """
+        
+        # Инициализируем API ключ
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        
+        # Делаем запрос к API
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "Ты - аналитик групповых дискуссий. Твоя задача определить, стоит ли продолжать дискуссию или она исчерпана."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=10
+        )
+        
+        # Получаем ответ
+        answer = response.choices[0].message.content.strip().lower()
+        
+        # Возвращаем True, если ответ "да"
+        return "да" in answer
+        
+    except Exception as e:
+        print(f"Ошибка при анализе дискуссии с помощью AI: {str(e)}")
+        return False  # В случае ошибки считаем, что дискуссию стоит продолжить
+
+def check_repeating_ideas(messages):
+    """Проверяет повторяются ли одни и те же идеи в сообщениях"""
+    # Простая эвристика - считаем количество одинаковых слов
+    all_content = " ".join([msg["content"].lower() for msg in messages])
+    words = all_content.split()
+    unique_words = set(words)
+    
+    # Если уникальных слов менее 60% от общего количества, 
+    # вероятно, участники повторяют одни и те же идеи
+    if len(unique_words) < 0.6 * len(words) and len(words) > 50:
+        return True
+    
+    return False
+
+def check_decreasing_informativeness(messages):
+    """Проверяет снижается ли информативность сообщений"""
+    # Смотрим на длину сообщений - если последние сообщения короче,
+    # вероятно, участникам нечего добавить
+    if len(messages) < 2:
+        return False
+        
+    avg_length_first_half = sum([len(msg["content"]) for msg in messages[:len(messages)//2]]) / (len(messages)//2)
+    avg_length_second_half = sum([len(msg["content"]) for msg in messages[len(messages)//2:]]) / (len(messages) - len(messages)//2)
+    
+    # Если средняя длина сообщений уменьшилась более чем на 30%, считаем, что информативность снизилась
+    return avg_length_second_half < 0.7 * avg_length_first_half
+
+def check_formal_responses(messages):
+    """Проверяет, становятся ли ответы формальными"""
+    # Ищем признаки формальных ответов - короткие фразы согласия/несогласия
+    formal_phrases = ["согласен", "да, верно", "поддерживаю", "хорошая идея", "интересно", "спасибо за мнение"]
+    
+    # Считаем количество сообщений с формальными фразами
+    formal_count = 0
+    for msg in messages:
+        content = msg["content"].lower()
+        for phrase in formal_phrases:
+            if phrase in content and len(content) < 200:  # Короткие сообщения с формальными фразами
+                formal_count += 1
+                break
+    
+    # Если более половины последних сообщений формальные, дискуссия исчерпана
+    return formal_count >= len(messages) / 2
+
+def find_next_agent_in_text(text, agent_names):
+    """Ищет обращение к агенту в тексте сообщения
+    
+    Args:
+        text: Текст сообщения
+        agent_names: Список имен агентов
+        
+    Returns:
+        str: Имя агента, к которому обращаются, или None, если не найдено
+    """
+    import re
+    
+    # Ищем обращения в формате [Persona_*]
+    pattern = r'\[(Persona_[^\]]+)\]'
+    matches = re.findall(pattern, text)
+    
+    # Проверяем, что найденные имена есть в списке агентов
+    for match in matches:
+        if match in agent_names:
+            return match
+    
+    return None
 
 if __name__ == "__main__":
     # При запуске файла напрямую, выводим результаты в консоль
