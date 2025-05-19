@@ -1,6 +1,6 @@
 import os
 import json
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 # Загружаем переменные окружения
@@ -15,7 +15,11 @@ class ReviewClassifier:
         if not self.openai_api_key:
             raise ValueError("OPENAI_API_KEY не найден в переменных окружения")
         
-        openai.api_key = self.openai_api_key
+        # Инициализируем клиент OpenAI с базовыми параметрами
+        self.client = OpenAI(
+            api_key=self.openai_api_key,
+            base_url="https://api.openai.com/v1"
+        )
     
     def classify_reviews(self, reviews):
         """Классифицирует отзывы на три категории
@@ -95,7 +99,7 @@ class ReviewClassifier:
 """
         
         try:
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "Ты - система классификации отзывов о приложении."},
@@ -180,8 +184,8 @@ class ReviewClassifier:
 """
             
             try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-4o-mini",
+                response = self.client.chat.completions.create(
+                    model="gpt-4",
                     messages=[
                         {"role": "system", "content": "Ты - эксперт по анализу отзывов. Твоя задача - найти закономерности и сгруппировать похожие отзывы."},
                         {"role": "user", "content": prompt}

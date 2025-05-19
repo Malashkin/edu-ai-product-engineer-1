@@ -9,7 +9,7 @@ from summarizer import DiscussionSummarizer
 from recommendations import Recommendations
 from review_classifier import ReviewClassifier
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -182,12 +182,15 @@ def analyze_reviews_topic(reviews):
     """
     
     try:
-        # Устанавливаем API ключ OpenAI
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        # Создаем клиент OpenAI с базовыми параметрами
+        client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url="https://api.openai.com/v1"
+        )
         
         # Делаем запрос к OpenAI для определения темы
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
+        response = client.chat.completions.create(
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": "Ты - эксперт по анализу отзывов приложений. Всегда отвечай только в формате JSON."},
                 {"role": "user", "content": prompt}

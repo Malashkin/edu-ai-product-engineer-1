@@ -1,6 +1,6 @@
 import json
 import os
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -13,8 +13,12 @@ class Recommendations:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY не найден в переменных окружения")
-        # Старая версия OpenAI имеет другую инициализацию
-        openai.api_key = api_key
+        
+        # Инициализируем клиент OpenAI с базовыми параметрами
+        self.client = OpenAI(
+            api_key=api_key,
+            base_url="https://api.openai.com/v1"
+        )
     
     def get_latest_discussion_file(self):
         """Находит самый свежий файл с результатами дискуссии"""
@@ -87,8 +91,8 @@ class Recommendations:
         
         # Отправляем запрос к OpenAI
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4o-mini",
+            response = self.client.chat.completions.create(
+                model="gpt-4",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
