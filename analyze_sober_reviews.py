@@ -85,6 +85,13 @@ async def run_sober_analysis():
     # Шаг 4: Обработка отчетов о багах
     print("\n4. Обработка отчетов о багах...")
     if classified_reviews['bug_reports']['raw']:
+        # Проверка каждого бага в баг-трекере (заглушка)
+        for i, bug in enumerate(classified_reviews['bug_reports']['raw'], 1):
+            bug_text = bug['text'] if isinstance(bug, dict) and 'text' in bug else str(bug)
+            check_result = check_similar_bug_in_tracker(bug_text)
+            print(f"Баг {i}: {check_result}")
+            # Генерация баг-репорта через OpenAI
+            generate_bug_report_via_openai(bug_text, bug_index=i, timestamp=timestamp)
         bug_personas = create_personas(
             classified_reviews['bug_reports']['raw'], 
             'bug_reports', 
@@ -380,6 +387,55 @@ def generate_recommendations(classified_reviews, bug_discussion_file, feature_di
     except Exception as e:
         print(f"Ошибка при генерации рекомендаций: {str(e)}")
         return None
+
+def check_similar_bug_in_tracker(bug_text):
+    """Заглушка для проверки наличия похожего бага в баг-трекере (Jira, GitHub и т.д.)"""
+    print(f"Проверка бага в баг-трекере: {bug_text[:60]}...")
+    return "Похожий баг не найден"
+
+def generate_bug_report_via_openai(bug_text, bug_index=None, timestamp=None):
+    """Генерирует баг-репорт по шаблону через OpenAI API"""
+    import openai
+    from dotenv import load_dotenv
+    load_dotenv()
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    prompt = f"""Разложи следующий баг по структуре баг-репорта:
+
+1. Заголовок
+2. Описание
+3. Шаги для воспроизведения
+4. Ожидаемый результат
+5. Фактический результат
+6. Окружение
+7. Вложения
+8. Дополнительно
+
+Текст бага:
+{bug_text}
+"""
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Ты — опытный тестировщик ПО. Всегда отвечай строго по структуре баг-репорта."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=800,
+        )
+        report = response.choices[0].message.content.strip()
+    except Exception as e:
+        report = f"Ошибка при генерации баг-репорта: {str(e)}\n\nТекст бага:\n{bug_text}"
+    # Сохраняем баг-репорт в файл
+    if not timestamp:
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    idx = bug_index if bug_index is not None else 'X'
+    filename = f"bugreport_{idx}_{timestamp}.md"
+    with open(os.path.join('output', filename), 'w', encoding='utf-8') as f:
+        f.write(report)
+    print(f"Баг-репорт сохранён в файл: {filename}")
+    return filename
 
 if __name__ == "__main__":
     # Проверяем наличие API ключа
