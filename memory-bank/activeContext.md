@@ -29,6 +29,12 @@ Ensuring consistent file organization:
 - Standardized file naming with timestamps
 - Memory Bank implementation for project documentation
 
+### 5. OpenAI API Migration (May 2024)
+- All code updated to use openai>=1.12.0 and new API syntax (openai.chat.completions.create)
+- Removed all legacy openai.ChatCompletion.create calls
+- requirements.txt now requires openai>=1.12.0
+- All error handling and response parsing updated for new API
+
 ## Recent Changes
 
 ### Bug Fixes

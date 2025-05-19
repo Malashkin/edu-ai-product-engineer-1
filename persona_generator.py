@@ -53,16 +53,15 @@ class PersonaGenerator:
             
             # Запрос к API для определения категории
             try:
-                response = openai.ChatCompletion.create(
+                response = openai.chat.completions.create(
                     model="gpt-3.5-turbo",
                     messages=[
                         {"role": "system", "content": "Ты - эксперт по анализу отзывов. Определи категорию объекта отзывов."},
                         {"role": "user", "content": f"На основе этих отзывов, определи основную категорию объекта отзывов. Отвечай одним словом.\n\n{sample_text}"}
                     ],
                     temperature=0.3,
-                    max_tokens=20
+                    max_tokens=20,
                 )
-                
                 category = response.choices[0].message.content.strip().lower()
                 print(f"Автоматически определена категория объекта: {category}")
             except Exception as e:
@@ -86,14 +85,14 @@ class PersonaGenerator:
         выявленные из анализа отзывов. Адаптируй описание к типу объекта отзывов."""
         
         try:
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Ты - эксперт по анализу потребительского поведения и созданию портретов целевой аудитории."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=1000
+                max_tokens=1000,
             )
             
             return response.choices[0].message.content
@@ -130,14 +129,14 @@ class PersonaGenerator:
         """
 
         try:
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "Ты - эксперт по анализу отзывов. Твоя задача - создавать четкие и информативные обзоры на основе отзывов."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=800
+                max_tokens=800,
             )
             
             return response.choices[0].message.content

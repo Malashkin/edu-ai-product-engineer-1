@@ -10,6 +10,7 @@ from recommendations import Recommendations
 from review_classifier import ReviewClassifier
 from dotenv import load_dotenv
 from openai import OpenAI
+import glob
 
 # Загружаем переменные окружения
 load_dotenv()
@@ -90,17 +91,18 @@ async def run_sober_analysis():
             timestamp, 
             category
         )
-        
-        bug_discussion_file = run_category_discussion(
+        bug_discussion_file, bug_summary_file = run_category_discussion(
             bug_personas, 
             f"{item_name} (отчеты о багах)", 
-            item_type
+            item_type,
+            summary_type='bug_reports'
         )
-        
         print(f"Обсуждение багов сохранено в файл: {bug_discussion_file}")
+        print(f"Резюме обсуждения багов сохранено в файл: {bug_summary_file}")
     else:
         print("Отчеты о багах не найдены")
         bug_discussion_file = None
+        bug_summary_file = None
 
     # Шаг 5: Обработка запросов функций
     print("\n5. Обработка запросов новых функций...")
@@ -111,22 +113,23 @@ async def run_sober_analysis():
             timestamp, 
             category
         )
-        
-        feature_discussion_file = run_category_discussion(
+        feature_discussion_file, feature_summary_file = run_category_discussion(
             feature_personas, 
             f"{item_name} (запросы функций)", 
-            item_type
+            item_type,
+            summary_type='feature_requests'
         )
-        
         print(f"Обсуждение запросов функций сохранено в файл: {feature_discussion_file}")
+        print(f"Резюме обсуждения функций сохранено в файл: {feature_summary_file}")
     else:
         print("Запросы новых функций не найдены")
         feature_discussion_file = None
+        feature_summary_file = None
     
     # Шаг 6: Генерация финальных рекомендаций
     print("\n6. Генерация финальных рекомендаций...")
     recommendations_file = generate_recommendations(
-        classified_reviews, bug_discussion_file, feature_discussion_file
+        classified_reviews, bug_discussion_file, feature_discussion_file, bug_summary_file, feature_summary_file
     )
     
     print("\nАнализ завершен успешно!")
@@ -190,7 +193,7 @@ def analyze_reviews_topic(reviews):
         
         # Делаем запрос к OpenAI для определения темы
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "Ты - эксперт по анализу отзывов приложений. Всегда отвечай только в формате JSON."},
                 {"role": "user", "content": prompt}
@@ -297,54 +300,47 @@ def create_personas(reviews, category_name, timestamp, app_category="app"):
     print(f"Персоны для категории '{category_name}' сохранены в файл: {personas_file}")
     return personas
 
-def run_category_discussion(personas, discussion_topic, item_type):
+def run_category_discussion(personas, discussion_topic, item_type, summary_type=None):
     """Запускает групповую дискуссию для конкретной категории отзывов
-    
     Args:
         personas: Список персон
         discussion_topic: Тема для обсуждения
         item_type: Тип объекта
-        
+        summary_type: Строка для типа резюме (например, 'bug_reports' или 'feature_requests')
     Returns:
-        str: Имя файла с результатами дискуссии
+        tuple: (имя файла дискуссии, имя файла резюме)
     """
     print(f"\nЗапуск групповой дискуссии по теме '{discussion_topic}'...")
-    
-    # Преобразуем список персон в формат, ожидаемый функцией run_group_discussion
-    personas_for_discussion = []
-    for persona_data in personas:
-        personas_for_discussion.append(persona_data['persona'])
-    
-    # Запускаем групповую дискуссию
+    personas_for_discussion = [persona_data['persona'] for persona_data in personas]
     discussion_file = run_group_discussion(
         item_type=item_type,
         item_name=discussion_topic,
         custom_personas=personas_for_discussion
     )
-    
-    # Создаем резюме дискуссии
+    # Формируем имя файла для резюме
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if summary_type:
+        summary_file = f"discussion_summary_{summary_type}_{timestamp}.txt"
+    else:
+        summary_file = f"discussion_summary_{timestamp}.txt"
     summarizer = DiscussionSummarizer()
-    summary = summarizer.summarize_discussion()
-    
-    return discussion_file
+    summary_file_actual = summarizer.summarize_discussion(file_path=discussion_file, output_file_name=summary_file)
+    return discussion_file, summary_file_actual
 
-def generate_recommendations(classified_reviews, bug_discussion_file, feature_discussion_file):
+def generate_recommendations(classified_reviews, bug_discussion_file, feature_discussion_file, bug_summary_file=None, feature_summary_file=None):
     """Генерирует итоговые рекомендации на основе всех анализов
-    
     Args:
         classified_reviews: Классифицированные отзывы
         bug_discussion_file: Файл с дискуссией по багам
         feature_discussion_file: Файл с дискуссией по функциям
-        
+        bug_summary_file: Файл с резюме баг-дискуссии
+        feature_summary_file: Файл с резюме фич-дискуссии
     Returns:
         str: Имя файла с рекомендациями
     """
     print("\nГенерация итоговых рекомендаций...")
-    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     recommendations_file = f"recommendations_{timestamp}.json"
-    
-    # Собираем данные для анализа
     analysis_data = {
         'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         'bug_reports': {
@@ -359,41 +355,28 @@ def generate_recommendations(classified_reviews, bug_discussion_file, feature_di
             'count': len(classified_reviews['appreciation']['raw'])
         }
     }
-    
-    # Добавляем данные из дискуссий, если они есть
-    bug_summary = None
-    feature_summary = None
-    
-    if bug_discussion_file:
+    if bug_summary_file:
         try:
-            # Получаем резюме дискуссии о багах
-            with open(os.path.join('output', f"discussion_summary_{bug_discussion_file.split('_')[1].split('.')[0]}.txt"), 'r', encoding='utf-8') as f:
+            with open(os.path.join('output', bug_summary_file), 'r', encoding='utf-8') as f:
                 bug_summary = f.read()
             analysis_data['bug_discussion_summary'] = bug_summary
         except Exception as e:
             print(f"Ошибка при чтении резюме дискуссии о багах: {str(e)}")
-    
-    if feature_discussion_file:
+    if feature_summary_file:
         try:
-            # Получаем резюме дискуссии о функциях
-            with open(os.path.join('output', f"discussion_summary_{feature_discussion_file.split('_')[1].split('.')[0]}.txt"), 'r', encoding='utf-8') as f:
+            with open(os.path.join('output', feature_summary_file), 'r', encoding='utf-8') as f:
                 feature_summary = f.read()
             analysis_data['feature_discussion_summary'] = feature_summary
         except Exception as e:
             print(f"Ошибка при чтении резюме дискуссии о функциях: {str(e)}")
-    
-    # Генерируем рекомендации на основе всех данных
     try:
         analyzer = Recommendations()
         result_file = analyzer.analyze_from_classified_data(analysis_data)
-        
         if result_file:
             print(f"Рекомендации сохранены в файл: {result_file}")
         else:
             print("Не удалось сгенерировать рекомендации")
-            
         return result_file
-            
     except Exception as e:
         print(f"Ошибка при генерации рекомендаций: {str(e)}")
         return None

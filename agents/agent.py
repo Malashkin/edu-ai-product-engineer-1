@@ -52,7 +52,7 @@ class Agent:
         
         messages = [system_message] + self.conversation_history
         
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
             temperature=self.temperature,

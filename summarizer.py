@@ -71,24 +71,24 @@ class DiscussionSummarizer:
         
         # Отправляем запрос к OpenAI
         try:
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=600
+                max_tokens=600,
             )
-            
             return response.choices[0].message.content
-            
         except Exception as e:
             print(f"Ошибка при генерации резюме: {str(e)}")
             return None
     
-    def summarize_discussion(self, file_path=None):
-        """Основной метод для резюмирования дискуссии"""
+    def summarize_discussion(self, file_path=None, output_file_name=None):
+        """Основной метод для резюмирования дискуссии
+        output_file_name: если задан, использовать это имя файла для сохранения
+        """
         # Загрузка данных
         data = self.load_discussion_data(file_path)
         
@@ -98,8 +98,11 @@ class DiscussionSummarizer:
         
         if summary:
             # Сохранение результатов
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_file = f"discussion_summary_{timestamp}.txt"
+            if output_file_name:
+                output_file = output_file_name
+            else:
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_file = f"discussion_summary_{timestamp}.txt"
             
             with open(os.path.join('output', output_file), "w", encoding="utf-8") as f:
                 f.write(summary)

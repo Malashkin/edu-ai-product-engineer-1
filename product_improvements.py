@@ -87,18 +87,16 @@ class Recommendations:
         
         # Отправляем запрос к OpenAI
         try:
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=600
+                max_tokens=600,
             )
-            
             return response.choices[0].message.content
-            
         except Exception as e:
             print(f"Ошибка при генерации рекомендаций: {str(e)}")
             return None
