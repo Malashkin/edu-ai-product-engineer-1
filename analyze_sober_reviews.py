@@ -8,6 +8,7 @@ from group_discussion import run_group_discussion
 from summarizer import DiscussionSummarizer
 from recommendations import Recommendations
 from review_classifier import ReviewClassifier
+from telegram_notifier import TelegramNotifier
 from dotenv import load_dotenv
 from openai import OpenAI
 import glob
@@ -84,6 +85,16 @@ async def run_sober_analysis():
 
     # Шаг 4: Обработка отчетов о багах
     print("\n4. Обработка отчетов о багах...")
+    
+    # Инициализируем Telegram notifier (с обработкой ошибок)
+    telegram_notifier = None
+    try:
+        telegram_notifier = TelegramNotifier()
+        print("✅ Telegram notifier инициализирован")
+    except Exception as e:
+        print(f"⚠️  Telegram notifier не удалось инициализировать: {str(e)}")
+        print("   Баг-репорты будут сохраняться только в файлы")
+    
     if classified_reviews['bug_reports']['raw']:
         # Проверка каждого бага в баг-трекере (заглушка)
         for i, bug in enumerate(classified_reviews['bug_reports']['raw'], 1):
@@ -100,6 +111,17 @@ async def run_sober_analysis():
             with open(bugreport_file, 'w', encoding='utf-8') as f:
                 f.write(bug_report)
             print(f"   Баг-репорт сохранен в {bugreport_file}")
+            
+            # Отправляем баг-репорт в Telegram
+            if telegram_notifier:
+                try:
+                    response = telegram_notifier.send_bug_report(bug_report, i)
+                    if response and response.get('ok'):
+                        print(f"   📤 Баг-репорт #{i} отправлен в Telegram")
+                    else:
+                        print(f"   ❌ Ошибка отправки баг-репорта #{i} в Telegram")
+                except Exception as e:
+                    print(f"   ❌ Ошибка при отправке в Telegram: {str(e)}")
         
         # Создаем персоны и запускаем дискуссию о багах
         bug_personas = create_personas(
@@ -116,6 +138,19 @@ async def run_sober_analysis():
         )
         print(f"Обсуждение багов сохранено в файл: {bug_discussion_file}")
         print(f"Резюме обсуждения багов сохранено в файл: {bug_summary_file}")
+        
+        # Отправляем резюме дискуссии о багах в Telegram
+        if telegram_notifier and bug_summary_file:
+            try:
+                with open(os.path.join('output', bug_summary_file), 'r', encoding='utf-8') as f:
+                    summary_content = f.read()
+                response = telegram_notifier.send_summary_report(summary_content, "bugs")
+                if response and response.get('ok'):
+                    print(f"   📤 Резюме дискуссии о багах отправлено в Telegram")
+                else:
+                    print(f"   ❌ Ошибка отправки резюме в Telegram")
+            except Exception as e:
+                print(f"   ❌ Ошибка при отправке резюме в Telegram: {str(e)}")
     else:
         print("Отчеты о багах не найдены")
         bug_discussion_file = None
@@ -178,6 +213,19 @@ async def run_sober_analysis():
         )
         print(f"Обсуждение запросов функций сохранено в файл: {feature_discussion_file}")
         print(f"Резюме обсуждения функций сохранено в файл: {feature_summary_file}")
+        
+        # Отправляем резюме дискуссии о функциях в Telegram
+        if telegram_notifier and feature_summary_file:
+            try:
+                with open(os.path.join('output', feature_summary_file), 'r', encoding='utf-8') as f:
+                    summary_content = f.read()
+                response = telegram_notifier.send_summary_report(summary_content, "features")
+                if response and response.get('ok'):
+                    print(f"   📤 Резюме дискуссии о функциях отправлено в Telegram")
+                else:
+                    print(f"   ❌ Ошибка отправки резюме о функциях в Telegram")
+            except Exception as e:
+                print(f"   ❌ Ошибка при отправке резюме о функциях в Telegram: {str(e)}")
     else:
         print("Запросы новых функций не найдены")
         feature_discussion_file = None

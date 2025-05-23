@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime
 from analyze_sober_reviews import find_duplicate_improvements, generate_improvement_proposal
+from telegram_sender import send_improvements_to_telegram
 
 def get_latest_file(pattern):
     files = glob.glob(os.path.join('output', pattern))
@@ -90,7 +91,20 @@ def main():
             f.write('\n\n---\n\n')
     
     print(f'Все предложения сохранены в {all_proposals_file}')
-    print('Готово!')
+    
+    # Отправляем предложения в Telegram
+    print(f"\n📱 Отправка предложений по улучшениям в Telegram...")
+    try:
+        success = send_improvements_to_telegram(timestamp)
+        if success:
+            print("✅ Все предложения по улучшениям успешно отправлены в Telegram!")
+        else:
+            print("❌ Ошибка при отправке предложений в Telegram")
+    except Exception as e:
+        print(f"❌ Ошибка отправки в Telegram: {str(e)}")
+        print("💾 Предложения сохранены локально в папке output/")
+    
+    print(f'\n🎯 Завершено! Timestamp: {timestamp}')
 
 if __name__ == "__main__":
     main() 

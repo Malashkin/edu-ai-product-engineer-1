@@ -2,6 +2,7 @@ import glob
 import json
 import os
 from analyze_sober_reviews import generate_bug_report_via_openai
+from telegram_sender import send_bug_reports_to_telegram
 
 def get_latest_file(pattern):
     files = glob.glob(os.path.join('output', pattern))
@@ -33,5 +34,19 @@ if not bug_candidates:
 from datetime import datetime
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
+print(f"🐛 Генерация {len(bug_candidates)} баг-репортов...")
 for i, bug_text in enumerate(bug_candidates, 1):
-    generate_bug_report_via_openai(bug_text, bug_index=i, timestamp=timestamp) 
+    generate_bug_report_via_openai(bug_text, bug_index=i, timestamp=timestamp)
+
+print(f"\n📱 Отправка баг-репортов в Telegram...")
+try:
+    success = send_bug_reports_to_telegram(timestamp)
+    if success:
+        print("✅ Все баг-репорты успешно отправлены в Telegram!")
+    else:
+        print("❌ Ошибка при отправке баг-репортов в Telegram")
+except Exception as e:
+    print(f"❌ Ошибка отправки в Telegram: {str(e)}")
+    print("💾 Баг-репорты сохранены локально в папке output/")
+
+print(f"\n🎯 Завершено! Timestamp: {timestamp}") 
