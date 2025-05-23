@@ -35,6 +35,15 @@ Ensuring consistent file organization:
 - requirements.txt now requires openai>=1.12.0
 - All error handling and response parsing updated for new API
 
+### 6. Баг-репорты и планы улучшений (May 2024)
+- Добавлена функция-заглушка check_similar_bug_in_tracker для проверки наличия похожих багов
+- Добавлена функция generate_bug_report_via_openai для формирования структурированных баг-репортов
+- Добавлена функция find_duplicate_improvements для анализа и объединения дублирующихся улучшений
+- Добавлена функция generate_improvement_proposal для создания структурированных планов реализации улучшений
+- Скрипт run_final_bugreports.py для быстрой генерации баг-репортов из финальных рекомендаций
+- Скрипт run_final_improvements.py для быстрой генерации планов улучшений из финальных рекомендаций
+- Основной пайплайн дополнен этапами генерации баг-репортов и планов улучшений
+
 ## Recent Changes
 
 ### Bug Fixes

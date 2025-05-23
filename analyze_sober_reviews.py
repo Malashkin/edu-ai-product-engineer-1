@@ -89,9 +89,19 @@ async def run_sober_analysis():
         for i, bug in enumerate(classified_reviews['bug_reports']['raw'], 1):
             bug_text = bug['text'] if isinstance(bug, dict) and 'text' in bug else str(bug)
             check_result = check_similar_bug_in_tracker(bug_text)
-            print(f"Баг {i}: {check_result}")
-            # Генерация баг-репорта через OpenAI
-            generate_bug_report_via_openai(bug_text, bug_index=i, timestamp=timestamp)
+            print(f"   {i}. {check_result}")
+            
+            # Генерируем баг-репорт по шаблону
+            timestamp_bug = datetime.now().strftime("%Y%m%d_%H%M%S")
+            bug_report = generate_bug_report_via_openai(bug_text, i, timestamp_bug)
+            
+            # Сохраняем баг-репорт в файл
+            bugreport_file = os.path.join('output', f'bugreport_{i}_{timestamp_bug}.md')
+            with open(bugreport_file, 'w', encoding='utf-8') as f:
+                f.write(bug_report)
+            print(f"   Баг-репорт сохранен в {bugreport_file}")
+        
+        # Создаем персоны и запускаем дискуссию о багах
         bug_personas = create_personas(
             classified_reviews['bug_reports']['raw'], 
             'bug_reports', 
@@ -114,6 +124,46 @@ async def run_sober_analysis():
     # Шаг 5: Обработка запросов функций
     print("\n5. Обработка запросов новых функций...")
     if classified_reviews['feature_requests']['raw']:
+        # Создаем список улучшений из запросов на функции
+        improvements_from_features = []
+        for i, feature in enumerate(classified_reviews['feature_requests']['raw'], 1):
+            feature_text = feature['text'] if isinstance(feature, dict) and 'text' in feature else str(feature)
+            improvements_from_features.append({
+                "category": "feature_improvements",
+                "title": f"Запрос на новую функцию #{i}",
+                "description": feature_text,
+                "priority": "medium"
+            })
+        
+        # Анализируем улучшения на дубликаты
+        if improvements_from_features:
+            print("   Анализ предложений по улучшениям на дубликаты...")
+            unique_improvements = find_duplicate_improvements(improvements_from_features)
+            print(f"   После анализа осталось {len(unique_improvements)} уникальных предложений")
+            
+            # Создаем детальные планы реализации для каждого улучшения
+            print("   Создание планов реализации...")
+            timestamp_imp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Сохраняем уникальные улучшения в JSON-файл
+            unique_improvements_file = os.path.join('output', f'unique_improvements_{timestamp_imp}.json')
+            with open(unique_improvements_file, 'w', encoding='utf-8') as f:
+                json.dump(unique_improvements, f, ensure_ascii=False, indent=2)
+            print(f"   Уникальные улучшения сохранены в {unique_improvements_file}")
+            
+            # Создаем планы реализации для каждого улучшения
+            for i, imp in enumerate(unique_improvements, 1):
+                print(f"   Создание плана реализации для улучшения {i} из {len(unique_improvements)}...")
+                proposal = generate_improvement_proposal(imp)
+                
+                # Сохраняем предложение в отдельный файл
+                imp_title = imp.get('title', f'improvement_{i}').replace(' ', '_').lower()[:30]  # Ограничиваем длину
+                proposal_file = os.path.join('output', f'improvement_proposal_{imp_title}_{timestamp_imp}.md')
+                with open(proposal_file, 'w', encoding='utf-8') as f:
+                    f.write(proposal)
+                print(f"   Предложение сохранено в {proposal_file}")
+        
+        # Продолжаем обычный пайплайн с созданием персон и дискуссией
         feature_personas = create_personas(
             classified_reviews['feature_requests']['raw'], 
             'feature_requests', 
@@ -132,7 +182,7 @@ async def run_sober_analysis():
         print("Запросы новых функций не найдены")
         feature_discussion_file = None
         feature_summary_file = None
-    
+
     # Шаг 6: Генерация финальных рекомендаций
     print("\n6. Генерация финальных рекомендаций...")
     recommendations_file = generate_recommendations(
@@ -436,6 +486,171 @@ def generate_bug_report_via_openai(bug_text, bug_index=None, timestamp=None):
         f.write(report)
     print(f"Баг-репорт сохранён в файл: {filename}")
     return filename
+
+def find_duplicate_improvements(improvements):
+    """Анализирует предложения по улучшениям и находит дубликаты/похожие идеи через OpenAI
+    
+    Args:
+        improvements: Список предложений по улучшениям
+        
+    Returns:
+        list: Список уникальных предложений по улучшениям с объединенным описанием
+    """
+    import openai
+    from dotenv import load_dotenv
+    load_dotenv()
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    
+    # Формируем список улучшений для анализа
+    improvements_text = ""
+    for i, imp in enumerate(improvements, 1):
+        imp_title = imp.get('title', 'Без названия')
+        imp_desc = imp.get('description', 'Без описания')
+        imp_category = imp.get('category', 'unknown')
+        improvements_text += f"Улучшение {i} ({imp_category}): {imp_title}\n{imp_desc}\n\n"
+    
+    prompt = f"""Проанализируй следующие предложения по улучшению приложения и найди дубликаты или похожие идеи.
+    Объедини похожие предложения, уточни формулировки и верни список уникальных идей.
+
+    Для каждой идеи укажи:
+    1. Категорию (feature_improvements, ux_improvements, stability_improvements и т.д.)
+    2. Заголовок (краткое описание улучшения)
+    3. Описание (подробное объяснение)
+    4. Приоритет (high, medium, low)
+
+    Вот список предложений:
+    {improvements_text}
+
+    Верни результат в формате JSON:
+    [
+      {{
+        "category": "feature_improvements",
+        "title": "Пример заголовка",
+        "description": "Пример описания",
+        "priority": "high"
+      }},
+      ...
+    ]
+    """
+    
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Ты — аналитик по продуктовому менеджменту. Твоя задача — анализировать и объединять похожие предложения по улучшению продукта."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+        )
+        
+        result = response.choices[0].message.content.strip()
+        
+        # Извлекаем JSON из ответа
+        import re
+        import json
+        
+        json_pattern = r'\[.*\]'
+        json_match = re.search(json_pattern, result, re.DOTALL)
+        
+        if json_match:
+            json_str = json_match.group(0)
+            unique_improvements = json.loads(json_str)
+        else:
+            try:
+                unique_improvements = json.loads(result)
+            except:
+                print("Не удалось извлечь JSON из ответа. Возвращаем исходный список улучшений.")
+                unique_improvements = improvements
+                
+        return unique_improvements
+        
+    except Exception as e:
+        print(f"Ошибка при анализе улучшений: {str(e)}")
+        return improvements
+
+def generate_improvement_proposal(improvement):
+    """Генерирует детальное предложение по улучшению по заданному шаблону
+    
+    Args:
+        improvement: Словарь с информацией об улучшении
+        
+    Returns:
+        str: Заполненная форма предложения по улучшению
+    """
+    import openai
+    from dotenv import load_dotenv
+    load_dotenv()
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+    
+    # Извлекаем информацию об улучшении
+    imp_title = improvement.get('title', 'Без названия')
+    imp_desc = improvement.get('description', 'Без описания')
+    imp_category = improvement.get('category', 'unknown')
+    imp_priority = improvement.get('priority', 'medium')
+    
+    # Формируем промпт для OpenAI
+    template = """Шаблон для предложений по улучшению (Product Improvement Proposal)
+1. Название предложения
+Краткое, ёмкое название улучшения/фичи.
+
+2. Категория
+(Выбери одну или несколько: Feature, UX Improvement, Stability, Performance, Bug Fix)
+
+3. Описание проблемы
+В чём суть проблемы/неудобства для пользователя?
+
+4. Предлагаемое решение
+Что именно предлагается изменить/добавить?
+
+5. Пользовательский эффект (User Impact)
+Как это повлияет на пользователей?
+
+6. Ожидаемый результат
+Какой положительный эффект ожидается после внедрения?
+
+7. Приоритет
+(High/Medium/Low) - исходя из количества затронутых пользователей, важности для бизнеса.
+
+8. Оценка сложности внедрения
+(Оценка: Low/Medium/High, если есть понимание или предварительная экспертиза)
+
+9. Примеры пользовательских отзывов (по желанию)
+Цитаты или выдержки из реальных отзывов, подтверждающие проблему.
+
+10. Дополнительные материалы
+Скриншоты, ссылки, аналитика, если есть."""
+    
+    prompt = f"""Заполни шаблон предложения по улучшению на основе следующей информации:
+
+Название: {imp_title}
+Категория: {imp_category}
+Описание: {imp_desc}
+Приоритет: {imp_priority}
+
+Вот шаблон, который нужно заполнить:
+
+{template}
+
+Дай развернутый, аргументированный ответ на основе предоставленной информации. Добавь логичные предположения, где информации недостаточно."""
+    
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "Ты — опытный продакт-менеджер. Твоя задача — создавать детальные предложения по улучшению продукта."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.5,
+            max_tokens=1200,
+        )
+        
+        proposal = response.choices[0].message.content.strip()
+        return proposal
+        
+    except Exception as e:
+        print(f"Ошибка при генерации предложения по улучшению: {str(e)}")
+        return f"Ошибка при генерации предложения: {str(e)}\n\nИсходные данные:\n{imp_title}\n{imp_desc}"
 
 if __name__ == "__main__":
     # Проверяем наличие API ключа
